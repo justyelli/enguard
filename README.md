@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Enguard — приложение для изучения английского
 
-## Getting Started
+Личное веб-приложение: чтение книг с переводом по клику, умный переводчик,
+коллекции-карточки с тренажёром и ежедневный персональный воркбук на печать.
 
-First, run the development server:
+## Возможности
+
+- **📖 Книги** — загружаешь файл **.epub** (главы и название определяются
+  автоматически) или вставляешь текст вручную (главы делятся строкой `---`).
+  Читаешь, кликаешь по любому слову → всплывает перевод с примерами. Слово можно
+  добавить в коллекцию. Прогресс чтения сохраняется, книги можно удалять.
+- **🔍 Умный переводчик** — не просто перевод: примеры употребления, синонимы с
+  оттенками и чем слово отличается от похожих. Через OpenAI, с кэшем.
+- **🃏 Коллекции и тренажёр** — карточки + интервальные повторения (SRS) и 9 режимов:
+  карточки, выбор перевода, обратный выбор, впиши слово, аудирование, сопоставление,
+  контекст, спринт на время, и микс.
+- **📅 Воркбук дня** — по тому, что ты читал/переводил/повторял, генерируется лист
+  заданий A4. Печатаешь, решаешь на бумаге, потом сверяешься с ответами на сайте.
+
+## Технологии
+
+Next.js 16 (App Router, TypeScript) · Prisma 7 + SQLite · Tailwind CSS 4 · OpenAI API.
+
+## Запуск
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npx prisma migrate dev   # создаёт базу dev.db (если ещё нет)
+npm run dev              # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Ключ OpenAI
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Умный переводчик и AI-воркбук работают через OpenAI. Открой файл `.env` и вставь
+свой ключ:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+OPENAI_API_KEY="sk-..."
+OPENAI_MODEL="gpt-4o-mini"   # можно поменять модель
+```
 
-## Learn More
+Без ключа приложение всё равно работает: переводы показывают заглушку, а воркбук
+собирается из твоих карточек локально (переводы и пропуски). С ключом — переводы
+становятся полными, а воркбук — разнообразным и персональным.
 
-To learn more about Next.js, take a look at the following resources:
+После изменения `.env` перезапусти `npm run dev`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Структура
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/
+  page.tsx              — дашборд со статистикой
+  books/                — библиотека и ридер
+  translate/            — умный переводчик
+  collections/          — коллекции, карточки, тренажёр (/[id]/study)
+  workbook/             — воркбук дня
+  api/                  — REST-эндпоинты (lookup, cards, review, workbook, …)
+components/             — Reader, StudySession, TranslationView, WorkbookView, …
+lib/
+  prisma.ts             — клиент БД
+  openai.ts             — клиент OpenAI
+  translate.ts          — умный перевод + кэш
+  srs.ts                — алгоритм интервальных повторений
+  analytics.ts          — статистика и подбор «слабых» слов
+  workbook.ts           — генерация воркбука
+prisma/schema.prisma    — схема БД
+```

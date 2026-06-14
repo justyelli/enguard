@@ -1,26 +1,154 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f8fa;
+  --surface: #ffffff;
+  --foreground: #1a1a2e;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --accent: #0ea5e9;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --hl-hover: #e0e7ff;
+  --hl-looked: #fef9c3;
+  --hl-known: #dcfce7;
+  --hl-hard: #fee2e2;
+}
+
+.dark {
+  --background: #0b0f1a;
+  --surface: #151a28;
+  --foreground: #e8eaf0;
+  --muted: #9aa3b2;
+  --border: #2a3145;
+  --primary: #818cf8;
+  --primary-hover: #a5b4fc;
+  --accent: #38bdf8;
+  --success: #4ade80;
+  --danger: #f87171;
+  --hl-hover: #312e81;
+  --hl-looked: #4a3f0a;
+  --hl-known: #14532d;
+  --hl-hard: #5a1d1d;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Кликабельное слово в ридере */
+.reader-word {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.12s ease;
+}
+.reader-word:hover {
+  background-color: var(--hl-hover);
+}
+.reader-word:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.reader-word.looked-up {
+  background-color: var(--hl-looked);
+}
+.reader-word.known {
+  color: var(--muted);
+}
+.reader-word.hard {
+  background-color: var(--hl-hard);
+}
+
+/* 3D-переворот карточек (как в Quizlet) */
+.flip-perspective {
+  perspective: 1200px;
+}
+.flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+.flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.flip-back {
+  transform: rotateY(180deg);
+}
+
+/* Воркбук в 2 колонки (и на экране, и на печати), чтобы влезал в один лист */
+.workbook-cols {
+  column-gap: 1.75rem;
+}
+@media (min-width: 640px) {
+  .workbook-cols {
+    column-count: 2;
+  }
+}
+.workbook-section,
+.workbook-item {
+  break-inside: avoid;
+}
+
+/* Печать воркбука: один лист A4, только сам лист */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    font-size: 10pt;
+    line-height: 1.3;
+  }
+  .workbook-cols {
+    column-count: 2 !important;
+    column-gap: 16px;
+  }
 }

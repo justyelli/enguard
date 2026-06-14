@@ -1,0 +1,129 @@
+// Enguard — схема БД (SQLite). Один пользователь, без аутентификации.
+// Документация: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─────────────────────────── Книги и чтение ───────────────────────────
+
+model Book {
+  id        Int       @id @default(autoincrement())
+  title     String
+  author    String?
+  language  String    @default("en")
+  createdAt DateTime  @default(now())
+
+  chapters  Chapter[]
+  progress  ReadingProgress?
+  lookups   WordLookup[]
+}
+
+model Chapter {
+  id      Int    @id @default(autoincrement())
+  bookId  Int
+  index   Int    // порядковый номер главы (с 0)
+  title   String?
+  content String // полный текст главы
+
+  book    Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, index])
+}
+
+model ReadingProgress {
+  id           Int      @id @default(autoincrement())
+  bookId       Int      @unique
+  chapterIndex Int      @default(0)
+  scrollPct    Float    @default(0) // 0..1 прокрутка внутри главы
+  updatedAt    DateTime @updatedAt
+
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+}
+
+// Каждый клик по слову в ридере — основа ежедневной аналитики.
+model WordLookup {
+  id        Int      @id @default(autoincrement())
+  word      String   // слово в нижнем регистре
+  context   String?  // предложение, в котором встретилось слово
+  bookId    Int?
+  createdAt DateTime @default(now())
+
+  book      Book?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  @@index([word])
+  @@index([createdAt])
+}
+
+// Кэш умных переводов, чтобы не дёргать OpenAI повторно.
+model Translation {
+  id        Int      @id @default(autoincrement())
+  term      String   @unique // запрашиваемое слово/фраза (lower, trimmed)
+  payload   String   // JSON: { translation, examples[], differences[], synonyms[], ... }
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────── Коллекции и карточки ───────────────────────────
+
+model Collection {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  cards       Card[]
+}
+
+model Card {
+  id            Int       @id @default(autoincrement())
+  collectionId  Int
+  word          String    // английское слово/фраза
+  translation   String    // перевод
+  example       String?   // пример употребления
+  context       String?   // предложение-источник (если добавлено из книги)
+  starred       Boolean   @default(false) // избранное
+
+  // SRS (алгоритм типа SM-2)
+  ease          Float     @default(2.5)
+  intervalDays  Int       @default(0)
+  reps          Int       @default(0)
+  lapses        Int       @default(0)
+  dueDate       DateTime  @default(now())
+  lastReviewed  DateTime?
+
+  createdAt     DateTime  @default(now())
+
+  collection    Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  reviews       ReviewLog[]
+
+  @@index([dueDate])
+}
+
+model ReviewLog {
+  id        Int      @id @default(autoincrement())
+  cardId    Int
+  mode      String   // flashcard | choose | reverse | type | listen | match | context | sprint
+  correct   Boolean
+  createdAt DateTime @default(now())
+
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+
+// ─────────────────────────── Воркбук ───────────────────────────
+
+model Workbook {
+  id        Int      @id @default(autoincrement())
+  day       String   @unique // YYYY-MM-DD
+  title     String
+  tasks     String   // JSON: массив заданий
+  answers   String   // JSON: правильные ответы
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

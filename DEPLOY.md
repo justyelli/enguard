@@ -62,6 +62,7 @@ APP_TZ_OFFSET="5"
 
 ### 4. База и сборка
 ```bash
+npx prisma generate         # сгенерировать клиент Prisma (он не в git)
 npx prisma migrate deploy   # создаёт prod.db и применяет миграции
 npm run build
 ```

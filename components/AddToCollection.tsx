@@ -20,9 +20,9 @@ export default function AddToCollection({
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [newName, setNewName] = useState("");
-  const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">(
-    "idle"
-  );
+  const [status, setStatus] = useState<
+    "idle" | "saving" | "done" | "error" | "needname"
+  >("idle");
   const [loaded, setLoaded] = useState(false);
 
   async function loadCollections() {
@@ -38,6 +38,10 @@ export default function AddToCollection({
   }, []);
 
   async function add() {
+    if (!selected && !newName.trim()) {
+      setStatus("needname");
+      return;
+    }
     setStatus("saving");
     try {
       let collectionId = selected ? Number(selected) : null;
@@ -122,14 +126,24 @@ export default function AddToCollection({
 
       <input
         value={newName}
-        onChange={(e) => setNewName(e.target.value)}
+        onChange={(e) => {
+          setNewName(e.target.value);
+          if (status === "needname") setStatus("idle");
+        }}
         placeholder={
           loaded && collections.length === 0
             ? "Создать коллекцию: введи название"
             : "…или новая коллекция"
         }
-        className="w-full rounded-lg border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-primary"
+        className={`w-full rounded-lg border bg-surface px-2 py-1.5 text-sm outline-none focus:border-primary ${
+          status === "needname" ? "border-danger" : "border-border"
+        }`}
       />
+      {status === "needname" && (
+        <div className="text-xs text-danger">
+          Сначала введи название коллекции (например «Мои слова»).
+        </div>
+      )}
       {status === "error" && (
         <div className="text-xs text-danger">Не удалось добавить.</div>
       )}

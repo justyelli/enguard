@@ -1,9 +1,19 @@
 import Link from "next/link";
-import { getWeakWords } from "@/lib/analytics";
+import { getWeakWords, getDueCount, getMistakeCount } from "@/lib/analytics";
 import WordOfDay from "@/components/WordOfDay";
 import GameDashboard from "@/components/GameDashboard";
+import ReminderToggle from "@/components/ReminderToggle";
 
 export const dynamic = "force-dynamic";
+
+async function getReviewCounts() {
+  try {
+    const [due, mistakes] = await Promise.all([getDueCount(), getMistakeCount()]);
+    return { due, mistakes };
+  } catch {
+    return { due: 0, mistakes: 0 };
+  }
+}
 
 // Детерминированно по дате выбираем «слово дня».
 async function getWordOfDay() {
@@ -48,7 +58,7 @@ const modules = [
 ];
 
 export default async function HomePage() {
-  const wod = await getWordOfDay();
+  const [wod, counts] = await Promise.all([getWordOfDay(), getReviewCounts()]);
 
   return (
     <div className="space-y-6">
@@ -61,6 +71,41 @@ export default async function HomePage() {
 
       <GameDashboard />
 
+      {(counts.due > 0 || counts.mistakes > 0) && (
+        <section className="grid gap-3 sm:grid-cols-2">
+          {counts.due > 0 && (
+            <Link
+              href="/review/due"
+              className="flex items-center justify-between rounded-2xl border border-primary/40 bg-primary/5 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div>
+                <div className="font-display font-bold">🔁 Повторить сегодня</div>
+                <div className="text-sm text-muted">
+                  {Math.min(counts.due, 40)}
+                  {counts.due > 40 ? "+" : ""} карточек ждут
+                </div>
+              </div>
+              <span className="btn3d bg-primary px-4 py-2 text-sm text-white">Начать</span>
+            </Link>
+          )}
+          {counts.mistakes > 0 && (
+            <Link
+              href="/review/mistakes"
+              className="flex items-center justify-between rounded-2xl border border-danger/40 bg-danger/5 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div>
+                <div className="font-display font-bold">🎯 Мои ошибки</div>
+                <div className="text-sm text-muted">
+                  {Math.min(counts.mistakes, 40)}
+                  {counts.mistakes > 40 ? "+" : ""} слов на проработку
+                </div>
+              </div>
+              <span className="rounded-lg border border-border px-4 py-2 text-sm font-bold">Прокачать</span>
+            </Link>
+          )}
+        </section>
+      )}
+
       {wod && (
         <WordOfDay
           word={wod.word}
@@ -68,6 +113,8 @@ export default async function HomePage() {
           example={wod.example}
         />
       )}
+
+      <ReminderToggle />
 
       <section className="grid gap-3 sm:grid-cols-2">
         {modules.map((m) => (

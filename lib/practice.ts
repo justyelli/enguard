@@ -232,6 +232,64 @@ const FALLBACK_GRAMMAR: GrammarQuestion[] = [
   },
 ];
 
+// ─────────────────────────── AI-репетитор (диалоги) ───────────────────────────
+
+export type TutorTurn = { role: "user" | "assistant"; content: string };
+export type TutorReply = {
+  reply: string;
+  correction: { original: string; fixed: string; note: string } | null;
+  fallback?: boolean;
+};
+
+export async function tutorReply(
+  scenario: string,
+  history: TutorTurn[]
+): Promise<TutorReply> {
+  if (!hasOpenAI()) {
+    return {
+      reply:
+        "AI-репетитор недоступен без ключа OpenAI. Добавь OPENAI_API_KEY в .env, чтобы поговорить.",
+      correction: null,
+      fallback: true,
+    };
+  }
+
+  const system = `Ты — дружелюбный преподаватель английского и собеседник для русскоязычного студента уровня A2-B1.
+Сценарий разговора: ${scenario}
+Правила:
+- Отвечай на ЕСТЕСТВЕННОМ, но не слишком сложном английском (короткие реплики, 1-3 предложения).
+- Оставайся в роли по сценарию и всегда заканчивай реплику вопросом, чтобы продолжить диалог.
+- Если в ПОСЛЕДНЕМ сообщении студента есть ошибка — мягко исправь.
+Верни СТРОГО JSON: { "reply": "твоя реплика на английском", "correction": null | { "original": "ошибочный фрагмент", "fixed": "исправление", "note": "короткое пояснение на русском" } }`;
+
+  try {
+    const openai = getOpenAI();
+    const completion = await openai.chat.completions.create({
+      model: OPENAI_MODEL,
+      temperature: 0.7,
+      max_tokens: 400,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: system },
+        ...history.slice(-12).map((m) => ({ role: m.role, content: m.content })),
+      ],
+    });
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(raw) as Partial<TutorReply>;
+    const c = parsed.correction;
+    return {
+      reply: typeof parsed.reply === "string" ? parsed.reply : "Sorry, can you say that again?",
+      correction:
+        c && typeof c.original === "string" && typeof c.fixed === "string"
+          ? { original: c.original, fixed: c.fixed, note: typeof c.note === "string" ? c.note : "" }
+          : null,
+    };
+  } catch (e) {
+    console.error("tutor error", e);
+    return { reply: "Hmm, let's try again. What would you like to talk about?", correction: null };
+  }
+}
+
 export async function generateGrammarQuiz(
   topic: string,
   level: Level

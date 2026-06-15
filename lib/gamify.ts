@@ -47,6 +47,16 @@ export function levelInfo(totalXp: number): LevelInfo {
 // ─────────────────────────── Даты ───────────────────────────
 
 export function dayKey(d = new Date()): string {
+  const off = process.env.APP_TZ_OFFSET;
+  // На сервере (Vercel = UTC) задаём смещение часового пояса пользователя,
+  // чтобы «день» (серия/цель/напоминания) сменялся в его локальную полночь.
+  if (off != null && off !== "") {
+    const t = new Date(d.getTime() + Number(off) * 3_600_000);
+    const y = t.getUTCFullYear();
+    const m = String(t.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(t.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");

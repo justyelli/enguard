@@ -32,6 +32,13 @@ const modules = [
     skill: "grammar",
     desc: "Квизы по темам: времена, артикли, предлоги, условные — с пояснениями.",
   },
+  {
+    href: "/practice/tutor",
+    icon: "💬",
+    title: "AI-репетитор",
+    skill: "tutor",
+    desc: "Живой диалог по сценариям с мягкими исправлениями ошибок.",
+  },
 ];
 
 export default async function PracticeHub() {

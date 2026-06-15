@@ -820,7 +820,18 @@ function NextButton({ onNext, correct }: { onNext: () => void; correct: boolean 
 
 function MatchGame({ cards, onExit }: { cards: StudyCard[]; onExit: () => void }) {
   const batches = useMemo(() => {
-    const shuffled = shuffle(cards);
+    // дедуп по слову и переводу, чтобы в наборе не было неоднозначных пар
+    const seenW = new Set<string>();
+    const seenT = new Set<string>();
+    const uniq = cards.filter((c) => {
+      const w = c.word.toLowerCase().trim();
+      const t = c.translation.toLowerCase().trim();
+      if (seenW.has(w) || seenT.has(t)) return false;
+      seenW.add(w);
+      seenT.add(t);
+      return true;
+    });
+    const shuffled = shuffle(uniq);
     const out: StudyCard[][] = [];
     for (let i = 0; i < shuffled.length; i += 5) out.push(shuffled.slice(i, i + 5));
     return out;

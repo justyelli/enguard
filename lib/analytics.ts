@@ -164,6 +164,64 @@ export async function getKnownWordsMap(): Promise<Record<string, "known" | "hard
   return map;
 }
 
+export type ReviewCard = {
+  id: number;
+  word: string;
+  translation: string;
+  example: string | null;
+  context: string | null;
+  starred: boolean;
+  dueDate: string;
+};
+
+function toReviewCard(c: {
+  id: number;
+  word: string;
+  translation: string;
+  example: string | null;
+  context: string | null;
+  starred: boolean;
+  dueDate: Date;
+}): ReviewCard {
+  return {
+    id: c.id,
+    word: c.word,
+    translation: c.translation,
+    example: c.example,
+    context: c.context,
+    starred: c.starred,
+    dueDate: c.dueDate.toISOString(),
+  };
+}
+
+// Карточки к повторению (срок подошёл) по всем коллекциям.
+export async function getDueCards(limit = 40): Promise<ReviewCard[]> {
+  const cards = await prisma.card.findMany({
+    where: { dueDate: { lte: new Date() } },
+    orderBy: { dueDate: "asc" },
+    take: limit,
+  });
+  return cards.map(toReviewCard);
+}
+
+export async function getDueCount(): Promise<number> {
+  return prisma.card.count({ where: { dueDate: { lte: new Date() } } });
+}
+
+// Карточки-ошибки (были провалены хотя бы раз) по всем коллекциям.
+export async function getMistakeCards(limit = 40): Promise<ReviewCard[]> {
+  const cards = await prisma.card.findMany({
+    where: { lapses: { gt: 0 } },
+    orderBy: { lapses: "desc" },
+    take: limit,
+  });
+  return cards.map(toReviewCard);
+}
+
+export async function getMistakeCount(): Promise<number> {
+  return prisma.card.count({ where: { lapses: { gt: 0 } } });
+}
+
 export type SkillStat = { skill: string; sessions: number; avgScore: number };
 
 // Сводка по навыкам практики (speaking/listening/grammar/writing) за 30 дней.

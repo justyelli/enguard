@@ -1,0 +1,23 @@
+# systemd-юнит для Enguard. Положить в /etc/systemd/system/enguard.service
+# Затем: sudo systemctl daemon-reload && sudo systemctl enable --now enguard
+#
+# ВАЖНО: проверь путь к node командой `which node` и поправь ExecStart при необходимости
+# (особенно если node ставился через nvm — тогда укажи полный путь к node из ~/.nvm/...).
+
+[Unit]
+Description=Enguard (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/enguard
+# .env читается Next.js автоматически из рабочей директории
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -p 3000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

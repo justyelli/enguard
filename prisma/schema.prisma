@@ -168,6 +168,15 @@ model Profile {
   updatedAt      DateTime  @updatedAt
 }
 
+// Подписки на пуш-уведомления (Web Push).
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
+
 // Письменные работы с разбором от AI.
 model WritingSubmission {
   id        Int      @id @default(autoincrement())

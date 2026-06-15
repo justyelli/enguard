@@ -123,7 +123,59 @@ model Workbook {
   day       String   @unique // YYYY-MM-DD
   title     String
   tasks     String   // JSON: массив заданий
-  answers   String   // JSON: правильные ответы
-  completed Boolean  @default(false)
+  answers    String  // JSON: правильные ответы
+  completed  Boolean @default(false)
+  rewardedXp Boolean @default(false) // XP за выполнение выдаётся один раз
+  createdAt  DateTime @default(now())
+}
+
+// ─────────────────────────── Практика (4 навыка) ───────────────────────────
+
+// Лог любой практики (speaking / listening / grammar) для статистики.
+model PracticeLog {
+  id        Int      @id @default(autoincrement())
+  skill     String   // speaking | listening | grammar | writing
+  detail    String?  // тема/режим
+  score     Int      @default(0)
+  total     Int      @default(0)
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([skill])
+}
+
+// Профиль игрока (singleton) — XP, уровень, серия, валюта, бусты.
+model Profile {
+  id             Int       @id @default(autoincrement())
+  totalXp        Int       @default(0)
+  todayXp        Int       @default(0)
+  todayDay       String? // YYYY-MM-DD, к которому относится todayXp
+  dailyGoalXp    Int       @default(50)
+  goalRewardedDay String? // день, за который уже выдана награда за цель
+
+  streak         Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActiveDay  String? // YYYY-MM-DD последнего активного дня
+
+  gems           Int       @default(0)
+  freezes        Int       @default(0) // заморозки серии (макс 2)
+  boost2         Int       @default(0) // жетоны ускорения 2x
+  boost3         Int       @default(0) // жетоны ускорения 3x
+
+  boostMult      Int       @default(1) // активный множитель: 1 / 2 / 3
+  boostExpires   DateTime?
+
+  updatedAt      DateTime  @updatedAt
+}
+
+// Письменные работы с разбором от AI.
+model WritingSubmission {
+  id        Int      @id @default(autoincrement())
+  prompt    String
+  text      String
+  score     Int      @default(0)
+  feedback  String   // JSON: { corrections:[{original,fixed,explanation}], improved, comment }
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

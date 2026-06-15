@@ -1,11 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Nunito, Comfortaa, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
+import Hud from "@/components/Hud";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin", "cyrillic"],
+});
+
+const baloo = Comfortaa({
+  variable: "--font-baloo",
+  subsets: ["latin", "cyrillic"],
+  weight: ["500", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -24,7 +31,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#4f46e5",
+  themeColor: "#3f7d4e",
 };
 
 export default function RootLayout({
@@ -36,7 +43,7 @@ export default function RootLayout({
     <html
       lang="ru"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${nunito.variable} ${baloo.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <script
@@ -46,7 +53,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        <NavBar />
+        <div className="no-print sticky top-0 z-40">
+          <NavBar />
+          <Hud />
+        </div>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:py-8">
           {children}
         </main>

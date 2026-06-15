@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { review, gradeFromCorrect, type Grade } from "@/lib/srs";
+import { awardXp, XP } from "@/lib/gamify";
 
 // POST /api/review  { cardId, mode, correct?, grade? }
 // Обновляет SRS-состояние карточки и пишет лог повтора.
@@ -51,7 +52,9 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    return NextResponse.json({ ok: true, dueDate: upd.dueDate });
+    const award = await awardXp(correct ? XP.reviewCorrect : XP.reviewWrong);
+
+    return NextResponse.json({ ok: true, dueDate: upd.dueDate, award });
   } catch (e) {
     console.error("review error", e);
     return NextResponse.json({ error: "Ошибка повтора" }, { status: 500 });

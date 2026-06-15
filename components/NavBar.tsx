@@ -9,7 +9,9 @@ const links = [
   { href: "/books", label: "Книги" },
   { href: "/translate", label: "Переводчик" },
   { href: "/collections", label: "Коллекции" },
+  { href: "/practice", label: "Практика" },
   { href: "/workbook", label: "Воркбук" },
+  { href: "/stats", label: "Статистика" },
 ];
 
 export default function NavBar() {
@@ -19,7 +21,7 @@ export default function NavBar() {
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/");
 
   return (
-    <header className="no-print sticky top-0 z-40 border-b border-border bg-surface/85 backdrop-blur">
+    <header className="no-print border-b border-border bg-surface/85 backdrop-blur">
       <nav className="mx-auto flex max-w-5xl items-center gap-2 px-3 py-2.5 sm:px-4">
         <Link
           href="/"

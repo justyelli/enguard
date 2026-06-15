@@ -2,38 +2,45 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ─── Тёплая палитра «полевой дневник»: пергамент + мшистая зелень ─── */
 :root {
-  --background: #f7f8fa;
-  --surface: #ffffff;
-  --foreground: #1a1a2e;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --accent: #0ea5e9;
-  --success: #16a34a;
-  --danger: #dc2626;
-  --hl-hover: #e0e7ff;
-  --hl-looked: #fef9c3;
-  --hl-known: #dcfce7;
-  --hl-hard: #fee2e2;
+  --background: #f4ecd8;
+  --surface: #fbf6e9;
+  --foreground: #2f2a22;
+  --muted: #8a7d63;
+  --border: #e6dabb;
+  --primary: #3f7d4e;
+  --primary-hover: #346542;
+  --accent: #e08a2b;
+  --success: #4f9d5d;
+  --danger: #c4502f;
+  --xp: #d99a17;
+  --streak: #e8642a;
+  --gem: #2f9bb3;
+  --hl-hover: #e7e0c4;
+  --hl-looked: #fbe7a8;
+  --hl-known: #d7e8cf;
+  --hl-hard: #f3d3c6;
 }
 
 .dark {
-  --background: #0b0f1a;
-  --surface: #151a28;
-  --foreground: #e8eaf0;
-  --muted: #9aa3b2;
-  --border: #2a3145;
-  --primary: #818cf8;
-  --primary-hover: #a5b4fc;
-  --accent: #38bdf8;
-  --success: #4ade80;
-  --danger: #f87171;
-  --hl-hover: #312e81;
+  --background: #1c1a14;
+  --surface: #26231a;
+  --foreground: #f0e8d4;
+  --muted: #a89878;
+  --border: #3a352a;
+  --primary: #6cc079;
+  --primary-hover: #84d28f;
+  --accent: #f0a64a;
+  --success: #6cc079;
+  --danger: #e87454;
+  --xp: #f0c04a;
+  --streak: #fb8147;
+  --gem: #48c4d8;
+  --hl-hover: #353021;
   --hl-looked: #4a3f0a;
-  --hl-known: #14532d;
-  --hl-hard: #5a1d1d;
+  --hl-known: #1f3a25;
+  --hl-hard: #4a241a;
 }
 
 @theme inline {
@@ -47,7 +54,11 @@
   --color-accent: var(--accent);
   --color-success: var(--success);
   --color-danger: var(--danger);
-  --font-sans: var(--font-geist-sans);
+  --color-xp: var(--xp);
+  --color-streak: var(--streak);
+  --color-gem: var(--gem);
+  --font-sans: var(--font-nunito);
+  --font-display: var(--font-baloo);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -63,7 +74,45 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-nunito), system-ui, sans-serif;
 }
+
+/* лёгкая «бумажная» текстура поверх фона */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+/* заголовки — округлый дружелюбный шрифт */
+h1, h2, h3, .font-display {
+  font-family: var(--font-baloo), var(--font-nunito), sans-serif;
+}
+
+/* ─── Объёмные кнопки в духе Duolingo (тень-«ступенька» + вдавливание) ─── */
+.btn3d {
+  border-radius: 1rem;
+  font-weight: 700;
+  box-shadow: 0 4px 0 0 var(--primary-hover);
+  transition: transform 0.06s ease, box-shadow 0.06s ease, filter 0.12s ease;
+}
+.btn3d:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 0 var(--primary-hover);
+}
+.btn3d:disabled {
+  opacity: 0.55;
+  box-shadow: 0 4px 0 0 var(--primary-hover);
+  transform: none;
+}
+
+/* стикеры-«штампы» с лёгким наклоном */
+.tilt-1 { transform: rotate(-2deg); }
+.tilt-2 { transform: rotate(2deg); }
 
 /* Кликабельное слово в ридере */
 .reader-word {
@@ -114,7 +163,7 @@ body {
   transform: rotateY(180deg);
 }
 
-/* Воркбук в 2 колонки (и на экране, и на печати), чтобы влезал в один лист */
+/* Воркбук в 2 колонки и печать A4 */
 .workbook-cols {
   column-gap: 1.75rem;
 }
@@ -128,7 +177,6 @@ body {
   break-inside: avoid;
 }
 
-/* Печать воркбука: один лист A4, только сам лист */
 @page {
   size: A4;
   margin: 12mm;

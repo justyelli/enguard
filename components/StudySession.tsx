@@ -77,6 +77,7 @@ async function recordReview(cardId: number, mode: string, correct: boolean) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cardId, mode, correct }),
     });
+    window.dispatchEvent(new CustomEvent("enguard:xp"));
   } catch {
     /* офлайн — пропускаем */
   }
@@ -235,6 +236,7 @@ function FlashcardDeck({
     Object.fromEntries(cards.map((c) => [c.id, !!c.starred]))
   );
   const touchX = useRef<number | null>(null);
+  const touchY = useRef<number | null>(null);
 
   const card = deck[pos];
   const done = pos >= deck.length;
@@ -401,13 +403,20 @@ function FlashcardDeck({
       {/* карта */}
       <div
         className="flip-perspective h-64 sm:h-80"
-        onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
+        onTouchStart={(e) => {
+          touchX.current = e.touches[0].clientX;
+          touchY.current = e.touches[0].clientY;
+        }}
         onTouchEnd={(e) => {
-          if (touchX.current === null) return;
+          if (touchX.current === null || touchY.current === null) return;
           const dx = e.changedTouches[0].clientX - touchX.current;
+          const dy = e.changedTouches[0].clientY - touchY.current;
           touchX.current = null;
-          if (dx > 60) grade("known");
-          else if (dx < -60) grade("learning");
+          touchY.current = null;
+          // только явный горизонтальный свайп (не вертикальная прокрутка)
+          if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
+          if (dx > 0) grade("known");
+          else grade("learning");
         }}
       >
         <div

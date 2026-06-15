@@ -1,7 +1,19 @@
 import Link from "next/link";
-import { getDailySeries, getDailyStats, type DayPoint } from "@/lib/analytics";
+import {
+  getDailySeries,
+  getDailyStats,
+  getPracticeSummary,
+  type DayPoint,
+} from "@/lib/analytics";
 
 export const dynamic = "force-dynamic";
+
+const SKILL_META: Record<string, { icon: string; label: string }> = {
+  listening: { icon: "🎧", label: "Аудирование" },
+  speaking: { icon: "🗣️", label: "Говорение" },
+  writing: { icon: "✍️", label: "Письмо" },
+  grammar: { icon: "📐", label: "Грамматика" },
+};
 
 function BarChart({ data }: { data: DayPoint[] }) {
   const max = Math.max(1, ...data.map((d) => d.reviews));
@@ -57,7 +69,7 @@ function BarChart({ data }: { data: DayPoint[] }) {
 }
 
 function Heatmap({ data }: { data: DayPoint[] }) {
-  const max = Math.max(1, ...data.map((d) => d.reviews + d.lookups));
+  const max = Math.max(1, ...data.map((d) => d.reviews + d.lookups + d.practice));
   function shade(v: number) {
     if (v === 0) return "var(--border)";
     const t = Math.min(1, v / max);
@@ -71,9 +83,9 @@ function Heatmap({ data }: { data: DayPoint[] }) {
       {data.map((d) => (
         <div
           key={d.day}
-          title={`${d.day}: ${d.reviews} повторов, ${d.lookups} переводов`}
+          title={`${d.day}: ${d.reviews} повторов, ${d.lookups} переводов, ${d.practice} практики`}
           className="h-5 w-5 rounded"
-          style={{ backgroundColor: shade(d.reviews + d.lookups) }}
+          style={{ backgroundColor: shade(d.reviews + d.lookups + d.practice) }}
         />
       ))}
     </div>
@@ -81,9 +93,10 @@ function Heatmap({ data }: { data: DayPoint[] }) {
 }
 
 export default async function StatsPage() {
-  const [series, stats] = await Promise.all([
+  const [series, stats, skills] = await Promise.all([
     getDailySeries(30),
     getDailyStats(),
+    getPracticeSummary(),
   ]);
 
   const totalReviews = series.reduce((s, d) => s + d.reviews, 0);
@@ -126,6 +139,24 @@ export default async function StatsPage() {
         <h2 className="font-semibold">Активность</h2>
         <p className="text-xs text-muted">Повторы + переводы по дням.</p>
         <Heatmap data={series} />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-semibold">Навыки (практика за 30 дней)</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {skills.map((s) => {
+            const meta = SKILL_META[s.skill];
+            return (
+              <div key={s.skill} className="rounded-xl border border-border bg-surface p-4">
+                <div className="text-2xl">{meta.icon}</div>
+                <div className="mt-1 text-sm font-medium">{meta.label}</div>
+                <div className="text-xs text-muted">
+                  {s.sessions > 0 ? `${s.sessions} занятий · ${s.avgScore}%` : "ещё не начато"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
     </div>
   );

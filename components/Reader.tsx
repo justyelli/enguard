@@ -122,16 +122,26 @@ export default function Reader({
       } catch {
         return;
       }
+      // Длинные абзацы дробим на предложения: Chrome молча обрывает длинные
+      // utterance и onend не срабатывает — цепочка зависает.
+      const chunks: { para: number; text: string }[] = [];
+      for (let p = start; p < paragraphs.length; p++) {
+        const sentences = paragraphs[p].match(/[^.!?]+[.!?]*/g) ?? [paragraphs[p]];
+        for (const s of sentences) {
+          const t = s.trim();
+          if (t) chunks.push({ para: p, text: t });
+        }
+      }
       speakingRef.current = true;
-      let i = start;
+      let i = 0;
       const speakNext = () => {
-        if (!speakingRef.current || i >= paragraphs.length) {
+        if (!speakingRef.current || i >= chunks.length) {
           speakingRef.current = false;
           setSpeakingPara(null);
           return;
         }
-        setSpeakingPara(i);
-        const u = new SpeechSynthesisUtterance(paragraphs[i]);
+        setSpeakingPara(chunks[i].para);
+        const u = new SpeechSynthesisUtterance(chunks[i].text);
         u.lang = "en-US";
         u.rate = 0.95;
         u.onend = () => {
@@ -171,6 +181,14 @@ export default function Reader({
     const data = await res.json();
     // игнорируем устаревший ответ (пользователь успел кликнуть другое слово)
     if (myReq !== reqSeq.current) return null;
+    if (lite) {
+      // обновить HUD (XP мог начислиться за новое слово)
+      try {
+        window.dispatchEvent(new CustomEvent("enguard:xp"));
+      } catch {
+        /* игнор */
+      }
+    }
     return data.translation as SmartTranslation;
   }
 
@@ -219,7 +237,9 @@ export default function Reader({
                 >
                   {chapters.map((c, i) => (
                     <option key={i} value={i}>
-                      {c.title || `Глава ${i + 1}`}
+                      {c.title && !/^(unknown|untitled)$/i.test(c.title.trim())
+                        ? c.title
+                        : `Глава ${i + 1}`}
                     </option>
                   ))}
                 </select>
@@ -308,7 +328,7 @@ export default function Reader({
             className="fixed inset-0 z-30 bg-black/20 lg:hidden"
             onClick={() => setSelected(null)}
           />
-          <aside className="fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto rounded-t-2xl border border-border bg-surface p-4 pb-6 shadow-xl lg:sticky lg:top-20 lg:inset-auto lg:z-0 lg:max-h-[calc(100vh-6rem)] lg:w-80 lg:rounded-2xl lg:pb-4 lg:shadow-sm">
+          <aside className="fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto overscroll-contain rounded-t-2xl border border-border bg-surface p-4 pb-6 shadow-xl lg:sticky lg:top-20 lg:inset-auto lg:z-0 lg:max-h-[calc(100vh-6rem)] lg:w-80 lg:rounded-2xl lg:pb-4 lg:shadow-sm">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase text-muted">Перевод</span>
               <button

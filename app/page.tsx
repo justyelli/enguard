@@ -1,23 +1,9 @@
 import Link from "next/link";
-import { getDailyStats, getWeakWords } from "@/lib/analytics";
+import { getWeakWords } from "@/lib/analytics";
 import WordOfDay from "@/components/WordOfDay";
+import GameDashboard from "@/components/GameDashboard";
 
 export const dynamic = "force-dynamic";
-
-async function getStats() {
-  try {
-    return await getDailyStats();
-  } catch {
-    return {
-      lookupsToday: 0,
-      reviewsToday: 0,
-      accuracyToday: 0,
-      cardsTotal: 0,
-      dueCount: 0,
-      streak: 0,
-    };
-  }
-}
 
 // Детерминированно по дате выбираем «слово дня».
 async function getWordOfDay() {
@@ -39,64 +25,41 @@ const modules = [
     href: "/books",
     icon: "📖",
     title: "Книги",
-    desc: "Читай книги и нажимай на слова — перевод появится сразу. Каждое слово можно добавить в коллекцию.",
+    desc: "Читай и нажимай на слова — перевод сразу. +2 XP за каждое новое слово.",
   },
   {
-    href: "/translate",
-    icon: "🔍",
-    title: "Умный переводчик",
-    desc: "Не просто перевод: примеры употребления, отличия от похожих слов и синонимы с оттенками.",
+    href: "/practice",
+    icon: "🏋️",
+    title: "Практика",
+    desc: "Аудирование, говорение, письмо и грамматика — все навыки и XP.",
   },
   {
     href: "/collections",
     icon: "🃏",
-    title: "Коллекции и тренажёр",
-    desc: "Собирай слова в карточки и заучивай разными упражнениями с интервальными повторениями.",
+    title: "Карточки",
+    desc: "Заучивай слова в Quizlet-стиле и зарабатывай XP за повторения.",
   },
   {
     href: "/workbook",
     icon: "📅",
-    title: "Ежедневный воркбук",
-    desc: "Каждый день — лист A4 с заданиями по твоим словам. Распечатай, реши, сверься с ответами.",
+    title: "Воркбук",
+    desc: "Лист заданий на день. Выполни и получи +25 XP.",
   },
 ];
 
 export default async function HomePage() {
-  const [stats, wod] = await Promise.all([getStats(), getWordOfDay()]);
-
-  const statCards = [
-    { label: "🔥 Серия дней", value: stats.streak },
-    { label: "Слов в карточках", value: stats.cardsTotal },
-    { label: "Переведено сегодня", value: stats.lookupsToday },
-    { label: "К повторению", value: stats.dueCount },
-    { label: "Повторов сегодня", value: stats.reviewsToday },
-    { label: "Точность сегодня", value: `${stats.accuracyToday}%` },
-  ];
+  const wod = await getWordOfDay();
 
   return (
-    <div className="space-y-8 sm:space-y-10">
-      <section className="space-y-3">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Добро пожаловать в Enguard 👋
+    <div className="space-y-6">
+      <section>
+        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          С возвращением 👋
         </h1>
-        <p className="max-w-2xl text-muted">
-          Личное пространство для изучения английского: чтение с переводом по клику,
-          умный словарь, карточки и персональный воркбук каждый день.
-        </p>
+        <p className="text-muted">Держи серию и двигайся к C1.</p>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {statCards.map((s) => (
-          <Link
-            href="/stats"
-            key={s.label}
-            className="rounded-xl border border-border bg-surface p-3 transition-colors hover:border-primary sm:p-4"
-          >
-            <div className="text-xl font-bold sm:text-2xl">{s.value}</div>
-            <div className="text-xs text-muted">{s.label}</div>
-          </Link>
-        ))}
-      </section>
+      <GameDashboard />
 
       {wod && (
         <WordOfDay
@@ -106,15 +69,15 @@ export default async function HomePage() {
         />
       )}
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid gap-3 sm:grid-cols-2">
         {modules.map((m) => (
           <Link
             key={m.href}
             href={m.href}
-            className="group rounded-2xl border border-border bg-surface p-5 transition-all hover:border-primary hover:shadow-md sm:p-6"
+            className="group rounded-3xl border border-border bg-surface p-5 transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_10px_24px_-14px_rgba(80,60,20,0.5)]"
           >
-            <div className="mb-3 text-3xl">{m.icon}</div>
-            <h2 className="mb-1 text-lg font-semibold group-hover:text-primary">
+            <div className="mb-2 text-3xl">{m.icon}</div>
+            <h2 className="mb-1 font-display text-lg font-bold group-hover:text-primary">
               {m.title}
             </h2>
             <p className="text-sm text-muted">{m.desc}</p>

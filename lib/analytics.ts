@@ -103,7 +103,7 @@ export async function getDailyStats(): Promise<DailyStats> {
   startToday.setHours(0, 0, 0, 0);
   const now = new Date();
 
-  const [lookupsToday, reviewsToday, reviewsTodayCorrect, cardsTotal, dueCount, allReviews] =
+  const [lookupsToday, reviewsToday, reviewsTodayCorrect, cardsTotal, dueCount, activityDays] =
     await Promise.all([
       prisma.wordLookup.count({ where: { createdAt: { gte: startToday } } }),
       prisma.reviewLog.count({ where: { createdAt: { gte: startToday } } }),
@@ -112,16 +112,17 @@ export async function getDailyStats(): Promise<DailyStats> {
       }),
       prisma.card.count(),
       prisma.card.count({ where: { dueDate: { lte: now } } }),
-      prisma.reviewLog.findMany({
-        select: { createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 500,
-      }),
+      // дни активности для streak: повторы + переводы + практика
+      Promise.all([
+        prisma.reviewLog.findMany({ select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1000 }),
+        prisma.wordLookup.findMany({ select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1000 }),
+        prisma.practiceLog.findMany({ select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1000 }),
+      ]).then((arrs) => arrs.flat()),
     ]);
 
-  // streak: считаем дни подряд (по дате локально) с хотя бы одним повтором
+  // streak: дни подряд с любой активностью (повтор / перевод / практика)
   const daySet = new Set(
-    allReviews.map((r) => {
+    activityDays.map((r) => {
       const d = new Date(r.createdAt);
       d.setHours(0, 0, 0, 0);
       return d.getTime();
@@ -163,11 +164,38 @@ export async function getKnownWordsMap(): Promise<Record<string, "known" | "hard
   return map;
 }
 
+export type SkillStat = { skill: string; sessions: number; avgScore: number };
+
+// Сводка по навыкам практики (speaking/listening/grammar/writing) за 30 дней.
+export async function getPracticeSummary(): Promise<SkillStat[]> {
+  const since = daysAgo(30);
+  const logs = await prisma.practiceLog.findMany({
+    where: { createdAt: { gte: since } },
+    select: { skill: true, score: true, total: true },
+  });
+  const map = new Map<string, { sessions: number; pctSum: number }>();
+  for (const l of logs) {
+    const cur = map.get(l.skill) ?? { sessions: 0, pctSum: 0 };
+    cur.sessions += 1;
+    cur.pctSum += l.total > 0 ? (l.score / l.total) * 100 : 0;
+    map.set(l.skill, cur);
+  }
+  return ["listening", "speaking", "writing", "grammar"].map((skill) => {
+    const v = map.get(skill);
+    return {
+      skill,
+      sessions: v?.sessions ?? 0,
+      avgScore: v && v.sessions ? Math.round(v.pctSum / v.sessions) : 0,
+    };
+  });
+}
+
 export type DayPoint = {
   day: string; // YYYY-MM-DD
   reviews: number;
   correct: number;
   lookups: number;
+  practice: number;
 };
 
 // Активность по дням за последние `days` дней (для графиков).
@@ -175,12 +203,16 @@ export async function getDailySeries(days = 30): Promise<DayPoint[]> {
   const since = daysAgo(days - 1);
   since.setHours(0, 0, 0, 0);
 
-  const [reviews, lookups] = await Promise.all([
+  const [reviews, lookups, practice] = await Promise.all([
     prisma.reviewLog.findMany({
       where: { createdAt: { gte: since } },
       select: { createdAt: true, correct: true },
     }),
     prisma.wordLookup.findMany({
+      where: { createdAt: { gte: since } },
+      select: { createdAt: true },
+    }),
+    prisma.practiceLog.findMany({
       where: { createdAt: { gte: since } },
       select: { createdAt: true },
     }),
@@ -197,7 +229,7 @@ export async function getDailySeries(days = 30): Promise<DayPoint[]> {
   for (let i = 0; i < days; i++) {
     const d = new Date(since);
     d.setDate(since.getDate() + i);
-    map.set(fmt(d), { day: fmt(d), reviews: 0, correct: 0, lookups: 0 });
+    map.set(fmt(d), { day: fmt(d), reviews: 0, correct: 0, lookups: 0, practice: 0 });
   }
   for (const r of reviews) {
     const k = fmt(new Date(r.createdAt));
@@ -211,6 +243,11 @@ export async function getDailySeries(days = 30): Promise<DayPoint[]> {
     const k = fmt(new Date(l.createdAt));
     const p = map.get(k);
     if (p) p.lookups++;
+  }
+  for (const pl of practice) {
+    const k = fmt(new Date(pl.createdAt));
+    const p = map.get(k);
+    if (p) p.practice++;
   }
   return [...map.values()];
 }

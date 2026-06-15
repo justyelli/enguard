@@ -20,7 +20,8 @@ export function normalizeTerm(raw: string): string {
   return raw
     .toLowerCase()
     .trim()
-    .replace(/^[^\p{L}\p{N}'-]+|[^\p{L}\p{N}'-]+$/gu, "");
+    .replace(/^[^\p{L}\p{N}'-]+|[^\p{L}\p{N}'-]+$/gu, "")
+    .slice(0, 120); // защита от слишком длинных запросов к OpenAI
 }
 
 // Лёгкий режим: только самое нужное — быстро (для ридера).

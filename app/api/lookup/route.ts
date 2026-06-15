@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTranslation, normalizeTerm } from "@/lib/translate";
+import { awardXp, XP } from "@/lib/gamify";
 
 // POST /api/lookup  { term, context?, bookId? }
 // Возвращает умный перевод и логирует клик по слову.
@@ -16,6 +17,12 @@ export async function POST(req: NextRequest) {
     if (log) {
       const word = normalizeTerm(term);
       if (word) {
+        // XP только за первое обращение к слову за день (без фарма повторными кликами)
+        const startToday = new Date();
+        startToday.setHours(0, 0, 0, 0);
+        const seenToday = await prisma.wordLookup.count({
+          where: { word, createdAt: { gte: startToday } },
+        });
         await prisma.wordLookup.create({
           data: {
             word,
@@ -23,6 +30,7 @@ export async function POST(req: NextRequest) {
             bookId: typeof bookId === "number" ? bookId : null,
           },
         });
+        if (seenToday === 0) await awardXp(XP.lookup);
       }
     }
 

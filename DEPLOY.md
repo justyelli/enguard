@@ -96,10 +96,16 @@ sudo certbot --nginx -d enguard.study -d www.enguard.study --redirect -m ramazan
 ```bash
 crontab -e
 ```
-Добавь строку (отправит напоминание раз в день в 18:00 по серверу, если ты не занимался):
+Добавь строку (каждые 3 часа; эндпоинт сам шлёт пуш только днём 9:00–22:00 локально и только если ты сегодня не занимался):
 ```
-0 18 * * * curl -s -H "Authorization: Bearer <CRON_SECRET>" https://enguard.study/api/push/cron > /dev/null 2>&1
+0 */3 * * * curl -s -H "Authorization: Bearer <CRON_SECRET>" https://enguard.study/api/push/cron > /dev/null 2>&1
 ```
+
+Проверить, что пуш реально доходит до устройства (после того как включил тумблер 🔔):
+```bash
+curl -H "Authorization: Bearer <CRON_SECRET>" "https://enguard.study/api/push/cron?test=1"
+```
+Ответ `{"sent":1,...}` означает «отправлено на 1 устройство» — на телефон/ПК придёт тестовое уведомление. `{"sent":0}` — значит подписок нет (не нажал тумблер / не дал разрешение).
 
 ### Обновление после изменений в коде
 ```bash

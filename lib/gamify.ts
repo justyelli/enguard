@@ -2,12 +2,13 @@ import { prisma } from "@/lib/prisma";
 
 // ─────────────────────────── Уровни CEFR ───────────────────────────
 
+// Пороги отражают реальную трудозатратность уровней CEFR: путь до C1 — долгий.
 export const LEVELS = [
   { cefr: "A1", minXp: 0 },
-  { cefr: "A2", minXp: 600 },
-  { cefr: "B1", minXp: 1800 },
-  { cefr: "B2", minXp: 4000 },
-  { cefr: "C1", minXp: 8000 },
+  { cefr: "A2", minXp: 5000 },
+  { cefr: "B1", minXp: 20000 },
+  { cefr: "B2", minXp: 50000 },
+  { cefr: "C1", minXp: 120000 },
 ];
 
 function levelIndex(xp: number): number {

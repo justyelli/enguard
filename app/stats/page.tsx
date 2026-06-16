@@ -88,13 +88,13 @@ export default async function StatsPage() {
   const last30 = series.slice(-30);
   const totalReviews = last30.reduce((s, d) => s + d.reviews, 0);
   const totalLookups = last30.reduce((s, d) => s + d.lookups, 0);
-  const unlocked = achievements.filter((a) => a.unlocked).length;
+  const totalLevels = achievements.reduce((s, a) => s + a.level, 0);
 
   const cards = [
     { label: "🔥 Серия дней", value: profile.streak },
     { label: "Повторов за 30 дней", value: totalReviews },
     { label: "Переводов за 30 дней", value: totalLookups },
-    { label: "🏅 Достижений", value: `${unlocked}/${achievements.length}` },
+    { label: "🏅 Уровней ачивок", value: totalLevels },
   ];
 
   return (
@@ -129,34 +129,49 @@ export default async function StatsPage() {
 
       <section className="space-y-3">
         <h2 className="font-display font-bold">🏅 Достижения</h2>
+        <p className="text-xs text-muted">Каждое — многоуровневое: дойди до следующего порога, чтобы поднять уровень.</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {achievements.map((a) => (
-            <div
-              key={a.id}
-              className={`rounded-2xl border p-4 ${
-                a.unlocked
-                  ? "border-primary/40 bg-primary/5"
-                  : "border-border bg-surface opacity-70"
-              }`}
-            >
-              <div className={`text-3xl ${a.unlocked ? "" : "grayscale"}`}>{a.icon}</div>
-              <div className="mt-1 font-display text-sm font-bold">{a.title}</div>
-              <div className="text-xs text-muted">{a.desc}</div>
-              {!a.unlocked && (
+          {achievements.map((a) => {
+            const pct = a.next
+              ? Math.round(((a.value - a.base) / (a.next - a.base)) * 100)
+              : 100;
+            return (
+              <div
+                key={a.id}
+                className={`rounded-2xl border p-4 ${
+                  a.unlocked ? "border-primary/40 bg-primary/5" : "border-border bg-surface"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className={`text-3xl ${a.unlocked ? "" : "grayscale opacity-60"}`}>
+                    {a.icon}
+                  </div>
+                  <span
+                    className={`rounded-md px-1.5 py-0.5 text-xs font-bold ${
+                      a.unlocked ? "bg-primary text-white" : "bg-border text-muted"
+                    }`}
+                    title={`Уровень ${a.level} из ${a.maxLevel}`}
+                  >
+                    ур. {a.level}
+                  </span>
+                </div>
+                <div className="mt-1 font-display text-sm font-bold">{a.title}</div>
                 <div className="mt-2">
                   <div className="h-1.5 overflow-hidden rounded-full bg-border">
                     <div
                       className="h-full rounded-full bg-primary"
-                      style={{ width: `${Math.round((a.current / a.target) * 100)}%` }}
+                      style={{ width: `${pct}%` }}
                     />
                   </div>
                   <div className="mt-1 text-[10px] text-muted">
-                    {a.current}/{a.target}
+                    {a.next
+                      ? `${a.value} / ${a.next} ${a.unit}`
+                      : `макс · ${a.value} ${a.unit}`}
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </section>
 

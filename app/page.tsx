@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { getWeakWords, getDueCount, getMistakeCount, getLeechCount } from "@/lib/analytics";
 import { getTodayPlan, type TodayPlan as TodayPlanData } from "@/lib/studyplan";
+import { getWeeklyInsight, type WeeklyInsight as WeeklyInsightData } from "@/lib/coach";
 import { hasPlacement } from "@/lib/gamify";
 import { getOpenMistakeCount } from "@/lib/mistakes";
 import WordOfDay from "@/components/WordOfDay";
 import GameDashboard from "@/components/GameDashboard";
 import TodayPlan from "@/components/TodayPlan";
+import WeeklyInsight from "@/components/WeeklyInsight";
 import ReminderToggle from "@/components/ReminderToggle";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +25,14 @@ async function getPlaced(): Promise<boolean> {
     return await hasPlacement();
   } catch {
     return true; // при ошибке не навязываем тест
+  }
+}
+
+async function getInsight(): Promise<WeeklyInsightData | null> {
+  try {
+    return await getWeeklyInsight();
+  } catch {
+    return null;
   }
 }
 
@@ -83,11 +93,12 @@ const modules = [
 ];
 
 export default async function HomePage() {
-  const [wod, counts, plan, placed] = await Promise.all([
+  const [wod, counts, plan, placed, insight] = await Promise.all([
     getWordOfDay(),
     getReviewCounts(),
     getPlan(),
     getPlaced(),
+    getInsight(),
   ]);
 
   return (
@@ -124,6 +135,8 @@ export default async function HomePage() {
       )}
 
       {plan && <TodayPlan plan={plan} />}
+
+      {insight && <WeeklyInsight insight={insight} />}
 
       {(counts.due > 0 || counts.mistakes > 0 || counts.errors > 0) && (
         <section className="grid gap-3 sm:grid-cols-2">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getProfile } from "@/lib/gamify";
 
-const ALLOWED = [20, 30, 50, 80, 120];
+const ALLOWED = [50, 150, 300, 450, 600];
 
 // POST /api/profile/goal  { goalXp }
 export async function POST(req: NextRequest) {

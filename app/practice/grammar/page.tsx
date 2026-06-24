@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 
 type Level = "easy" | "medium" | "hard";
@@ -42,8 +42,11 @@ export default function GrammarPage() {
   const [answered, setAnswered] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
+  // накопитель неверных ответов для журнала ошибок (ref — чтобы не зависеть от ре-рендеров)
+  const wrongRef = useRef<{ source: "grammar"; wrong: string; correct: string; note: string; category: string }[]>([]);
 
   async function start() {
+    wrongRef.current = [];
     setLoading(true);
     try {
       const res = await fetch("/api/practice/grammar", {
@@ -74,6 +77,14 @@ export default function GrammarPage() {
     setPicked(value);
     setAnswered(true);
     if (ok) setCorrectCount((c) => c + 1);
+    else
+      wrongRef.current.push({
+        source: "grammar",
+        wrong: q.question,
+        correct: q.answer,
+        note: q.explanation,
+        category: topic,
+      });
   }
 
   function next() {
@@ -95,6 +106,14 @@ export default function GrammarPage() {
       })
         .then(() => window.dispatchEvent(new CustomEvent("enguard:xp")))
         .catch(() => {});
+      // отправляем неверные ответы в журнал ошибок
+      if (wrongRef.current.length > 0) {
+        fetch("/api/mistakes/record", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: wrongRef.current }),
+        }).catch(() => {});
+      }
     }
   }
 

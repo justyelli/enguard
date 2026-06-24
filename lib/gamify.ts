@@ -2,13 +2,18 @@ import { prisma } from "@/lib/prisma";
 
 // ─────────────────────────── Уровни CEFR ───────────────────────────
 
-// Пороги отражают реальную трудозатратность уровней CEFR: путь до C1 — долгий.
+// Пороги откалиброваны под цель «A2→C1 за ~3 месяца по 2-3 ч/день».
+// Полный учебный день (план на сегодня целиком) ≈ 340 XP:
+//   ~50 повторений + чтение/словарь + 4 практики + репетитор + воркбук.
+// 90 таких дней ≈ 30 000 XP, поэтому путь A2→C1 ≈ 30 500 XP, распределён по
+// ступеням с нарастающей трудозатратностью (выше уровень — дольше дорога):
+//   A2→B1 ≈ 21 дн., B1→B2 ≈ 29 дн., B2→C1 ≈ 37 дн.
 export const LEVELS = [
   { cefr: "A1", minXp: 0 },
-  { cefr: "A2", minXp: 5000 },
-  { cefr: "B1", minXp: 20000 },
-  { cefr: "B2", minXp: 50000 },
-  { cefr: "C1", minXp: 120000 },
+  { cefr: "A2", minXp: 1500 },
+  { cefr: "B1", minXp: 9000 },
+  { cefr: "B2", minXp: 19000 },
+  { cefr: "C1", minXp: 32000 },
 ];
 
 function levelIndex(xp: number): number {
@@ -64,7 +69,7 @@ export function dayKey(d = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
-function diffDays(fromKey: string, toKey: string): number {
+export function diffDays(fromKey: string, toKey: string): number {
   const a = new Date(fromKey + "T00:00:00");
   const b = new Date(toKey + "T00:00:00");
   return Math.round((b.getTime() - a.getTime()) / 86_400_000);
@@ -78,6 +83,26 @@ export async function getProfile() {
     where: { id: 1 },
     update: {},
     create: { id: 1 },
+  });
+}
+
+// Диагностика уже пройдена? (помечаем строкой practiceLog с skill="placement")
+export async function hasPlacement(): Promise<boolean> {
+  const row = await prisma.practiceLog.findFirst({ where: { skill: "placement" } });
+  return !!row;
+}
+
+/**
+ * Выставляет стартовую базовую линию XP по результату диагностики — ТОЛЬКО ВВЕРХ.
+ * Не трогает серию/дневную цель/today: это не «занятие», а калибровка точки старта.
+ * Возвращает итоговый totalXp.
+ */
+export async function setBaselineXp(targetXp: number): Promise<number> {
+  return await prisma.$transaction(async (tx) => {
+    const p = await tx.profile.upsert({ where: { id: 1 }, update: {}, create: { id: 1 } });
+    if (targetXp <= p.totalXp) return p.totalXp;
+    await tx.profile.update({ where: { id: p.id }, data: { totalXp: targetXp } });
+    return targetXp;
   });
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { gradeWriting } from "@/lib/practice";
 import { awardXp, practiceXp } from "@/lib/gamify";
+import { recordMistakesSafe } from "@/lib/mistakes";
 
 // POST /api/practice/writing/grade  { prompt, text }
 export async function POST(req: NextRequest) {
@@ -34,6 +35,15 @@ export async function POST(req: NextRequest) {
         data: { skill: "writing", score: feedback.score, total: 100 },
       });
       award = await awardXp(practiceXp(feedback.score, 100));
+      // в журнал ошибок — каждое исправление
+      await recordMistakesSafe(
+        feedback.corrections.map((c) => ({
+          source: "writing" as const,
+          wrong: c.original,
+          correct: c.fixed,
+          note: c.explanation,
+        }))
+      );
     }
 
     return NextResponse.json({ feedback, award });

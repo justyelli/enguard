@@ -13,6 +13,14 @@ export type SrsUpdate = SrsState & { dueDate: Date };
 
 const MIN_EASE = 1.3;
 
+// «Лич» — слово, которое раз за разом проваливается: SRS-зубрёжка ему не
+// помогает. Такие карточки помечаем (для адресной проработки) и не гоняем по
+// кругу в одной сессии, а откладываем — это эффективнее, чем биться о них.
+export const LEECH_LAPSES = 8;
+export function isLeech(lapses: number): boolean {
+  return lapses >= LEECH_LAPSES;
+}
+
 function addDays(base: Date, days: number): Date {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
@@ -25,6 +33,18 @@ function inMinutes(base: Date, min: number): Date {
   return new Date(base.getTime() + min * 60_000);
 }
 
+// Размытие интервала (как в Anki/FSRS): когда добавляешь пачку слов разом, без
+// fuzz все они приходят на повтор в один день и создают пики, ломающие режим.
+// Разброс растёт с интервалом, но ограничен. Размываем ТОЛЬКО дату повтора —
+// сам intervalDays храним «чистым», чтобы дрейф не накапливался.
+export function fuzzDays(interval: number, rnd: () => number = Math.random): number {
+  if (interval < 3) return interval;
+  const pct = interval < 7 ? 0.15 : interval < 30 ? 0.1 : 0.05;
+  const spread = Math.max(1, Math.round(interval * pct));
+  const delta = Math.round((rnd() * 2 - 1) * spread);
+  return Math.max(1, interval + delta);
+}
+
 export function review(state: SrsState, grade: Grade, now = new Date()): SrsUpdate {
   let { ease, intervalDays, reps, lapses } = state;
 
@@ -33,7 +53,9 @@ export function review(state: SrsState, grade: Grade, now = new Date()): SrsUpda
     lapses += 1;
     reps = 0;
     intervalDays = 0;
-    return { ease, intervalDays, reps, lapses, dueDate: inMinutes(now, 10) };
+    // лич не гоняем по кругу в сессии — даём отлежаться до завтра
+    const dueDate = isLeech(lapses) ? addDays(now, 1) : inMinutes(now, 10);
+    return { ease, intervalDays, reps, lapses, dueDate };
   }
 
   reps += 1;
@@ -51,7 +73,8 @@ export function review(state: SrsState, grade: Grade, now = new Date()): SrsUpda
     else intervalDays = Math.max(1, Math.round(intervalDays * ease * 1.3));
   }
 
-  return { ease, intervalDays, reps, lapses, dueDate: addDays(now, intervalDays) };
+  // intervalDays — чистый (для будущих умножений), дату повтора размываем
+  return { ease, intervalDays, reps, lapses, dueDate: addDays(now, fuzzDays(intervalDays)) };
 }
 
 // Для бинарных упражнений (верно/неверно) маппим на grade.

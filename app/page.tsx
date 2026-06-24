@@ -1,17 +1,42 @@
 import Link from "next/link";
-import { getWeakWords, getDueCount, getMistakeCount } from "@/lib/analytics";
+import { getWeakWords, getDueCount, getMistakeCount, getLeechCount } from "@/lib/analytics";
+import { getTodayPlan, type TodayPlan as TodayPlanData } from "@/lib/studyplan";
+import { hasPlacement } from "@/lib/gamify";
+import { getOpenMistakeCount } from "@/lib/mistakes";
 import WordOfDay from "@/components/WordOfDay";
 import GameDashboard from "@/components/GameDashboard";
+import TodayPlan from "@/components/TodayPlan";
 import ReminderToggle from "@/components/ReminderToggle";
 
 export const dynamic = "force-dynamic";
 
+async function getPlan(): Promise<TodayPlanData | null> {
+  try {
+    return await getTodayPlan();
+  } catch {
+    return null;
+  }
+}
+
+async function getPlaced(): Promise<boolean> {
+  try {
+    return await hasPlacement();
+  } catch {
+    return true; // при ошибке не навязываем тест
+  }
+}
+
 async function getReviewCounts() {
   try {
-    const [due, mistakes] = await Promise.all([getDueCount(), getMistakeCount()]);
-    return { due, mistakes };
+    const [due, mistakes, errors, leeches] = await Promise.all([
+      getDueCount(),
+      getMistakeCount(),
+      getOpenMistakeCount(),
+      getLeechCount(),
+    ]);
+    return { due, mistakes, errors, leeches };
   } catch {
-    return { due: 0, mistakes: 0 };
+    return { due: 0, mistakes: 0, errors: 0, leeches: 0 };
   }
 }
 
@@ -58,7 +83,12 @@ const modules = [
 ];
 
 export default async function HomePage() {
-  const [wod, counts] = await Promise.all([getWordOfDay(), getReviewCounts()]);
+  const [wod, counts, plan, placed] = await Promise.all([
+    getWordOfDay(),
+    getReviewCounts(),
+    getPlan(),
+    getPlaced(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -67,11 +97,35 @@ export default async function HomePage() {
           С возвращением 👋
         </h1>
         <p className="text-muted">Держи серию и двигайся к C1.</p>
+        <Link
+          href="/path"
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/5"
+        >
+          🧭 Путь к C1 — мой темп и прогноз →
+        </Link>
       </section>
 
       <GameDashboard />
 
-      {(counts.due > 0 || counts.mistakes > 0) && (
+      {!placed && (
+        <Link
+          href="/placement"
+          className="flex items-center justify-between gap-3 rounded-3xl border-2 border-primary/50 bg-primary/5 p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div>
+            <div className="font-display text-lg font-bold">🎯 Определи свой уровень</div>
+            <div className="text-sm text-muted">
+              Короткий тест (12 вопросов) поставит тебя на верную точку старта — план и
+              путь к C1 подстроятся под неё.
+            </div>
+          </div>
+          <span className="btn3d shrink-0 bg-primary px-4 py-2 text-sm text-white">Пройти</span>
+        </Link>
+      )}
+
+      {plan && <TodayPlan plan={plan} />}
+
+      {(counts.due > 0 || counts.mistakes > 0 || counts.errors > 0) && (
         <section className="grid gap-3 sm:grid-cols-2">
           {counts.due > 0 && (
             <Link
@@ -98,9 +152,27 @@ export default async function HomePage() {
                 <div className="text-sm text-muted">
                   {Math.min(counts.mistakes, 40)}
                   {counts.mistakes > 40 ? "+" : ""} слов на проработку
+                  {counts.leeches > 0 && (
+                    <span className="text-danger"> · 🐛 {counts.leeches} трудных</span>
+                  )}
                 </div>
               </div>
               <span className="rounded-lg border border-border px-4 py-2 text-sm font-bold">Прокачать</span>
+            </Link>
+          )}
+          {counts.errors > 0 && (
+            <Link
+              href="/mistakes"
+              className="flex items-center justify-between rounded-2xl border border-accent/40 bg-accent/5 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div>
+                <div className="font-display font-bold">🛠️ Работа над ошибками</div>
+                <div className="text-sm text-muted">
+                  {Math.min(counts.errors, 40)}
+                  {counts.errors > 40 ? "+" : ""} ошибок на проработку
+                </div>
+              </div>
+              <span className="rounded-lg border border-border px-4 py-2 text-sm font-bold">Разобрать</span>
             </Link>
           )}
         </section>

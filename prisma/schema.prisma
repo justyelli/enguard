@@ -177,6 +177,25 @@ model PushSubscription {
   createdAt DateTime @default(now())
 }
 
+// Журнал персональных ошибок (грамматика/словоупотребление) для точечной
+// проработки. Источники: разбор письма, исправления репетитора, грамм-квиз.
+// «Resolved» после нескольких верных повторений — как мини-SRS для ошибок.
+model Mistake {
+  id        Int       @id @default(autoincrement())
+  source    String    // writing | tutor | grammar
+  wrong     String    // ошибочный фрагмент или вопрос
+  correct   String    // правильный вариант
+  note      String?   // пояснение (на русском)
+  category  String?   // тема (опц.)
+  reps      Int       @default(0) // сколько раз подряд верно отработано
+  resolved  Boolean   @default(false)
+  lastSeen  DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([resolved])
+  @@index([createdAt])
+}
+
 // Письменные работы с разбором от AI.
 model WritingSubmission {
   id        Int      @id @default(autoincrement())

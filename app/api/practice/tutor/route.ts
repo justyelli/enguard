@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tutorReply, type TutorTurn } from "@/lib/practice";
 import { awardXp } from "@/lib/gamify";
+import { recordMistakesSafe } from "@/lib/mistakes";
 
 // POST /api/practice/tutor  { scenario, messages: [{role, content}] }
 export async function POST(req: NextRequest) {
@@ -32,6 +33,17 @@ export async function POST(req: NextRequest) {
     let award = null;
     if (!result.fallback && messages.length > 0 && messages[messages.length - 1].role === "user") {
       award = await awardXp(4);
+    }
+    // в журнал ошибок — мягкое исправление репетитора
+    if (result.correction) {
+      await recordMistakesSafe([
+        {
+          source: "tutor",
+          wrong: result.correction.original,
+          correct: result.correction.fixed,
+          note: result.correction.note,
+        },
+      ]);
     }
     return NextResponse.json({ ...result, award });
   } catch (e) {

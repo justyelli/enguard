@@ -19,7 +19,8 @@ type Profile = {
 type Level = { cefr: string; next: string | null; pct: number; toNext: number; intoLevel: number; levelSpan: number };
 
 const CEFR = ["A1", "A2", "B1", "B2", "C1"];
-const GOALS = [20, 30, 50, 80, 120];
+// Цели под 2-3 ч/день: 300 XP ≈ полный учебный день (план на сегодня целиком).
+const GOALS = [50, 150, 300, 450, 600];
 
 function refreshHud() {
   try {

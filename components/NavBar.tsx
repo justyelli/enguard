@@ -6,10 +6,13 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 const links = [
   { href: "/", label: "Главная", exact: true },
+  { href: "/path", label: "Путь" },
   { href: "/books", label: "Книги" },
   { href: "/translate", label: "Переводчик" },
   { href: "/collections", label: "Коллекции" },
+  { href: "/vocab", label: "Лексика" },
   { href: "/practice", label: "Практика" },
+  { href: "/mistakes", label: "Ошибки" },
   { href: "/workbook", label: "Воркбук" },
   { href: "/stats", label: "Статистика" },
 ];

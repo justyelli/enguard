@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeTerm } from "@/lib/translate";
+import { LEECH_LAPSES } from "@/lib/srs";
 
 export type WeakWord = {
   word: string;
@@ -220,6 +221,21 @@ export async function getMistakeCards(limit = 40): Promise<ReviewCard[]> {
 
 export async function getMistakeCount(): Promise<number> {
   return prisma.card.count({ where: { lapses: { gt: 0 } } });
+}
+
+// «Личи» — хронически проваливаемые карточки (нужна адресная проработка).
+export async function getLeechCount(): Promise<number> {
+  return prisma.card.count({ where: { lapses: { gte: LEECH_LAPSES } } });
+}
+
+// Сами лич-карточки — для отдельного списка/проработки.
+export async function getLeechCards(limit = 40): Promise<ReviewCard[]> {
+  const cards = await prisma.card.findMany({
+    where: { lapses: { gte: LEECH_LAPSES } },
+    orderBy: { lapses: "desc" },
+    take: limit,
+  });
+  return cards.map(toReviewCard);
 }
 
 export type SkillStat = { skill: string; sessions: number; avgScore: number };

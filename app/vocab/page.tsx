@@ -4,6 +4,7 @@ import { getReadingWordCandidates } from "@/lib/reading-words";
 import AddVocab from "@/components/AddVocab";
 import AddReadingWords from "@/components/AddReadingWords";
 import GenerateVocab from "@/components/GenerateVocab";
+import GeneratePhrases from "@/components/GeneratePhrases";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,8 @@ export default async function VocabPage() {
           )}
         </section>
       )}
+
+      <GeneratePhrases />
 
       {prog.bands.map((b) => {
         const pct = Math.round((b.known / b.total) * 100);

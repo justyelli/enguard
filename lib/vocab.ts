@@ -220,19 +220,40 @@ export async function unaddedWords(band: Band): Promise<VocabWord[]> {
 // конечно, поэтому докидываем следующие по полезности/частотности слова уровня
 // через ИИ, исключая уже известные. Возвращает [] без ключа OpenAI или при сбое.
 
-const GEN_SYS = `Ты — преподаватель английского для русскоязычных. Дай следующую порцию самых ПОЛЕЗНЫХ слов/фраз заданного уровня CEFR, по убыванию частотности и практической ценности (не редкие и не оффенсив).
+// Режим догенерации: одиночные слова, устойчивые сочетания (коллокации) или
+// фразовые глаголы. Чанки (collocations/phrasals) — главный двигатель беглости
+// на B2→C1: именно они отличают естественную речь от ученической.
+export type VocabKind = "words" | "collocations" | "phrasals";
+
+const GEN_SYS_BY_KIND: Record<VocabKind, string> = {
+  words: `Ты — преподаватель английского для русскоязычных. Дай следующую порцию самых ПОЛЕЗНЫХ слов заданного уровня CEFR, по убыванию частотности и практической ценности (не редкие и не оффенсив).
 Верни СТРОГО JSON без markdown: { "words": [ { "w": "english word", "t": "краткий перевод (1-3 слова, рус.)", "ex": "короткий естественный пример на английском" } ] }
-Все слова — нижним регистром (кроме имён собственных). НЕ повторяй слова из списка исключений. Ровно запрошенное число.`;
+Все слова — нижним регистром (кроме имён собственных). НЕ повторяй из списка исключений. Ровно запрошенное число.`,
+  collocations: `Ты — преподаватель английского для русскоязычных. Дай следующую порцию самых ПОЛЕЗНЫХ устойчивых СЛОВОСОЧЕТАНИЙ (коллокаций) заданного уровня CEFR, по убыванию частотности (примеры: make a decision, heavy rain, take a risk, pay attention). Это естественные сочетания, которые отличают беглую речь.
+Верни СТРОГО JSON без markdown: { "words": [ { "w": "english collocation", "t": "перевод (рус.)", "ex": "короткий естественный пример с этим сочетанием" } ] }
+НЕ повторяй из списка исключений. Ровно запрошенное число.`,
+  phrasals: `Ты — преподаватель английского для русскоязычных. Дай следующую порцию самых ЧАСТОТНЫХ ФРАЗОВЫХ ГЛАГОЛОВ заданного уровня CEFR (примеры: give up, put off, come across, look forward to). Это классический барьер на пути к C1.
+Верни СТРОГО JSON без markdown: { "words": [ { "w": "phrasal verb", "t": "перевод (рус.)", "ex": "короткий естественный пример с этим фразовым глаголом" } ] }
+НЕ повторяй из списка исключений. Ровно запрошенное число.`,
+};
+
+export const VOCAB_KIND_COLLECTION: Record<VocabKind, (band: Band) => string> = {
+  words: (b) => `${VOCAB_COLLECTION_PREFIX} · ${b}`,
+  collocations: (b) => `Сочетания · ${b}`,
+  phrasals: (b) => `Фразовые глаголы · ${b}`,
+};
 
 export async function generateVocabBatch(
   band: Band,
   exclude: string[],
-  count = 10
+  count = 10,
+  kind: VocabKind = "words"
 ): Promise<VocabWord[]> {
   if (!hasOpenAI()) return [];
   const excludeSet = new Set(exclude.map((w) => normalizeTerm(w)));
   // в промпт кладём ограниченный список-подсказку, жёсткий дедуп — ниже
   const hint = exclude.slice(0, 200).join(", ");
+  const unit = kind === "words" ? "слов" : kind === "collocations" ? "сочетаний" : "фразовых глаголов";
   try {
     const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
@@ -241,10 +262,10 @@ export async function generateVocabBatch(
       max_tokens: 900,
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: GEN_SYS },
+        { role: "system", content: GEN_SYS_BY_KIND[kind] },
         {
           role: "user",
-          content: `Уровень: ${band}. Сколько слов: ${count}. Исключи (уже знаю): ${hint || "—"}.`,
+          content: `Уровень: ${band}. Сколько ${unit}: ${count}. Исключи (уже есть): ${hint || "—"}.`,
         },
       ],
     });

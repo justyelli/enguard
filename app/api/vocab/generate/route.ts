@@ -5,22 +5,27 @@ import {
   existingCardWords,
   CORE_VOCAB,
   VOCAB_BANDS,
-  VOCAB_COLLECTION_PREFIX,
+  VOCAB_KIND_COLLECTION,
   type Band,
+  type VocabKind,
 } from "@/lib/vocab";
 import { hasOpenAI } from "@/lib/openai";
 
-// POST /api/vocab/generate  { band, count? }
-// ИИ подбирает следующую порцию частотных слов уровня (минус уже известные),
-// добавляет в коллекцию уровня как карточки.
+const KINDS: VocabKind[] = ["words", "collocations", "phrasals"];
+
+// POST /api/vocab/generate  { band, count?, kind? }
+// ИИ подбирает следующую порцию частотных слов/сочетаний/фразовых глаголов уровня
+// (минус уже известные), добавляет в коллекцию по виду как карточки.
 export async function POST(req: NextRequest) {
   let band: Band = "A2";
   let count = 10;
+  let kind: VocabKind = "words";
   try {
     const body = await req.json();
     if (VOCAB_BANDS.includes(body.band)) band = body.band;
     else return NextResponse.json({ error: "bad band" }, { status: 400 });
     if (Number.isFinite(body.count)) count = Math.max(1, Math.min(20, Math.floor(body.count)));
+    if (KINDS.includes(body.kind)) kind = body.kind;
   } catch {
     return NextResponse.json({ error: "bad body" }, { status: 400 });
   }
@@ -34,17 +39,17 @@ export async function POST(req: NextRequest) {
   const coreWords = VOCAB_BANDS.flatMap((b) => CORE_VOCAB[b].map((w) => w.w));
   const exclude = [...new Set([...cardWords, ...coreWords])];
 
-  const batch = await generateVocabBatch(band, exclude, count);
+  const batch = await generateVocabBatch(band, exclude, count, kind);
   if (batch.length === 0) {
     return NextResponse.json({ added: 0, ai: true });
   }
 
-  const name = `${VOCAB_COLLECTION_PREFIX} · ${band}`;
+  const name = VOCAB_KIND_COLLECTION[kind](band);
   const existing = await prisma.collection.findFirst({ where: { name } });
   const collection =
     existing ??
     (await prisma.collection.create({
-      data: { name, description: `Базовые слова уровня ${band} для повторения.` },
+      data: { name, description: `${name} — для повторения.` },
     }));
 
   const siblings = await prisma.card.findMany({

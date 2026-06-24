@@ -138,7 +138,7 @@ export default async function HomePage() {
 
       {insight && <WeeklyInsight insight={insight} />}
 
-      {(counts.due > 0 || counts.mistakes > 0 || counts.errors > 0) && (
+      {(counts.due > 0 || counts.mistakes > 0 || counts.errors > 0 || counts.leeches > 0) && (
         <section className="grid gap-3 sm:grid-cols-2">
           {counts.due > 0 && (
             <Link
@@ -165,9 +165,6 @@ export default async function HomePage() {
                 <div className="text-sm text-muted">
                   {Math.min(counts.mistakes, 40)}
                   {counts.mistakes > 40 ? "+" : ""} слов на проработку
-                  {counts.leeches > 0 && (
-                    <span className="text-danger"> · 🐛 {counts.leeches} трудных</span>
-                  )}
                 </div>
               </div>
               <span className="rounded-lg border border-border px-4 py-2 text-sm font-bold">Прокачать</span>
@@ -186,6 +183,20 @@ export default async function HomePage() {
                 </div>
               </div>
               <span className="rounded-lg border border-border px-4 py-2 text-sm font-bold">Разобрать</span>
+            </Link>
+          )}
+          {counts.leeches > 0 && (
+            <Link
+              href="/leeches"
+              className="flex items-center justify-between rounded-2xl border border-danger/40 bg-danger/5 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div>
+                <div className="font-display font-bold">🐛 Трудные слова</div>
+                <div className="text-sm text-muted">
+                  {counts.leeches} никак не запоминаются — попробуй мнемоники
+                </div>
+              </div>
+              <span className="rounded-lg border border-border px-4 py-2 text-sm font-bold">Запомнить</span>
             </Link>
           )}
         </section>

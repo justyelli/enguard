@@ -84,6 +84,21 @@ export async function getOpenMistakeCount(): Promise<number> {
   return prisma.mistake.count({ where: { resolved: false } });
 }
 
+// Грамматическая тема, в которой ученик ошибается чаще всего (для адресной
+// тренировки). Источник — ошибки грамм-квиза с категорией = тема.
+export async function getWeakGrammarTopic(): Promise<{ topic: string; count: number } | null> {
+  const rows = await prisma.mistake.groupBy({
+    by: ["category"],
+    where: { source: "grammar", category: { not: null } },
+    _count: { category: true },
+    orderBy: { _count: { category: "desc" } },
+    take: 1,
+  });
+  const top = rows[0];
+  if (!top || !top.category) return null;
+  return { topic: top.category, count: top._count.category };
+}
+
 // Неотработанные ошибки: давно/никогда не виденные — первыми (интервал).
 export async function getOpenMistakes(limit = 20): Promise<MistakeView[]> {
   const rows = await prisma.mistake.findMany({

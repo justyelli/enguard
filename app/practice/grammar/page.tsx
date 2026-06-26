@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 type Level = "easy" | "medium" | "hard";
@@ -42,8 +42,23 @@ export default function GrammarPage() {
   const [answered, setAnswered] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
+  // тема, в которой ученик чаще всего ошибается (рекомендация)
+  const [recommended, setRecommended] = useState<{ topic: string; count: number } | null>(null);
   // накопитель неверных ответов для журнала ошибок (ref — чтобы не зависеть от ре-рендеров)
   const wrongRef = useRef<{ source: "grammar"; wrong: string; correct: string; note: string; category: string }[]>([]);
+
+  // подтягиваем слабую тему и преднастраиваем её
+  useEffect(() => {
+    fetch("/api/practice/grammar/weak", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.topic && d.count >= 2 && TOPICS.includes(d.topic)) {
+          setRecommended({ topic: d.topic, count: d.count });
+          setTopic(d.topic);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function start() {
     wrongRef.current = [];
@@ -149,6 +164,14 @@ export default function GrammarPage() {
         </Link>
         <h1 className="text-xl font-bold sm:text-2xl">📐 Грамматика</h1>
         <p className="text-muted">Выбери тему — соберу квиз с пояснениями.</p>
+
+        {recommended && (
+          <div className="rounded-xl border border-accent/40 bg-accent/5 px-4 py-3 text-sm">
+            💡 Ты чаще всего ошибаешься в теме{" "}
+            <b className="text-accent">«{recommended.topic}»</b> — давай потренируем
+            её. Тема уже выбрана; можешь сменить ниже.
+          </div>
+        )}
 
         <div>
           <label className="mb-1 block text-sm font-medium">Тема</label>

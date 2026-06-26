@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeTerm } from "@/lib/translate";
 import { LEECH_LAPSES } from "@/lib/srs";
+import { dayKey, diffDays } from "@/lib/gamify";
 
 export type WeakWord = {
   word: string;
@@ -262,6 +263,59 @@ export async function getLeechCards(limit = 40): Promise<ReviewCard[]> {
     take: limit,
   });
   return cards.map(toReviewCard);
+}
+
+// ─────────────────────────── Прогноз повторений (как в Anki) ───────────────────────────
+// График предстоящей нагрузки по dueDate карточек — делает SRS прозрачным и
+// помогает планировать. Границы суток считаем через dayKey/diffDays (как серия/
+// цель), чтобы не плыло в продакшене (Vercel=UTC + APP_TZ_OFFSET).
+
+export type ForecastDay = { key: string; label: string; count: number; today: boolean };
+export type ReviewForecast = {
+  days: ForecastDay[];
+  later: number; // карточки со сроком дальше горизонта
+  max: number;
+  total: number;
+};
+
+const WD = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+
+export async function getReviewForecast(days = 14): Promise<ReviewForecast> {
+  const now = new Date();
+  const cards = await prisma.card.findMany({ select: { dueDate: true } });
+  const todayKey = dayKey(now);
+
+  const counts = new Array(days).fill(0);
+  let later = 0;
+  for (const c of cards) {
+    if (c.dueDate <= now) {
+      counts[0]++; // просроченные и due сегодня
+      continue;
+    }
+    const d = diffDays(todayKey, dayKey(c.dueDate));
+    if (d <= 0) counts[0]++;
+    else if (d < days) counts[d]++;
+    else later++;
+  }
+
+  const out: ForecastDay[] = [];
+  for (let i = 0; i < days; i++) {
+    const dt = new Date(now);
+    dt.setDate(dt.getDate() + i);
+    const key = dayKey(dt);
+    // день недели берём из того же offset-aware ключа (полдень UTC устойчив к
+    // смещению и DST), иначе на проде (UTC + APP_TZ_OFFSET) подпись съезжает на день
+    out.push({
+      key,
+      label: i === 0 ? "Сег" : WD[new Date(key + "T12:00:00Z").getUTCDay()],
+      count: counts[i],
+      today: i === 0,
+    });
+  }
+
+  const max = Math.max(1, ...counts);
+  const total = counts.reduce((s, n) => s + n, 0) + later;
+  return { days: out, later, max, total };
 }
 
 export type SkillStat = { skill: string; sessions: number; avgScore: number };

@@ -2,7 +2,9 @@ import Link from "next/link";
 import {
   getDailySeries,
   getPracticeSummary,
+  getReviewForecast,
   type DayPoint,
+  type ReviewForecast,
 } from "@/lib/analytics";
 import { getAchievements } from "@/lib/achievements";
 import { getProfile } from "@/lib/gamify";
@@ -78,13 +80,46 @@ function Calendar({ data }: { data: DayPoint[] }) {
   );
 }
 
+function ForecastChart({ data }: { data: ReviewForecast }) {
+  return (
+    <div className="overflow-x-auto">
+      <div className="flex items-end gap-1.5">
+        {data.days.map((d) => {
+          const barH = Math.round((d.count / data.max) * 110);
+          return (
+            <div key={d.key} className="flex min-w-[28px] flex-1 flex-col items-center gap-1" title={`${d.key}: ${d.count} к повторению`}>
+              <span className="h-3 text-[10px] font-bold text-muted">{d.count || ""}</span>
+              <div
+                className="w-full rounded-t"
+                style={{
+                  height: `${d.count ? Math.max(4, barH) : 0}px`,
+                  backgroundColor: d.today ? "var(--accent)" : "var(--primary)",
+                }}
+              />
+              <span className={`text-[10px] ${d.today ? "font-bold text-accent" : "text-muted"}`}>
+                {d.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      {data.later > 0 && (
+        <p className="mt-2 text-xs text-muted">
+          +{data.later} карточек со сроком позже двух недель.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default async function StatsPage() {
-  const [series, skills, achievements, profile, vocab] = await Promise.all([
+  const [series, skills, achievements, profile, vocab, forecast] = await Promise.all([
     getDailySeries(84),
     getPracticeSummary(),
     getAchievements(),
     getProfile(),
     getVocabSize(),
+    getReviewForecast(14),
   ]);
 
   const last30 = series.slice(-30);
@@ -164,6 +199,24 @@ export default async function StatsPage() {
         <h2 className="font-display font-bold">Повторы по дням (30 дней)</h2>
         <p className="text-xs text-muted">Зелёным — верные ответы, серым — всего.</p>
         <BarChart data={last30} />
+      </section>
+
+      <section className="space-y-3 rounded-2xl border border-border bg-surface p-4 sm:p-6">
+        <h2 className="font-display font-bold">Прогноз повторений (2 недели)</h2>
+        <p className="text-xs text-muted">
+          Сколько карточек выйдет на повтор по дням. Оранжевым — сегодня (и просроченные).
+          Видишь пик — разнеси добавление новых слов, чтобы не перегрузиться.
+        </p>
+        {forecast.total === 0 ? (
+          <p className="text-sm text-muted">Запланированных повторений пока нет — добавь слова в карточки.</p>
+        ) : forecast.days.every((d) => d.count === 0) ? (
+          <p className="text-sm text-muted">
+            В ближайшие 2 недели повторов нет — все слова на длинных интервалах. Ещё{" "}
+            {forecast.later} выйдут на повтор позже.
+          </p>
+        ) : (
+          <ForecastChart data={forecast} />
+        )}
       </section>
 
       <section className="space-y-3">

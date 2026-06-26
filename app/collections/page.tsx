@@ -55,6 +55,21 @@ export default function CollectionsPage() {
         </button>
       </form>
 
+      <Link
+        href="/match"
+        className="flex items-center justify-between gap-3 rounded-2xl border-2 border-accent/40 bg-accent/5 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
+      >
+        <div>
+          <div className="font-display font-bold">🎮 Игра «Пары»</div>
+          <div className="text-sm text-muted">
+            Соединяй слово с переводом на скорость — азартная тренировка лексики.
+          </div>
+        </div>
+        <span className="btn3d shrink-0 bg-accent px-4 py-2 text-sm text-white" style={{ boxShadow: "0 4px 0 0 color-mix(in srgb, var(--accent) 70%, black)" }}>
+          Играть
+        </span>
+      </Link>
+
       {loading ? (
         <div className="text-muted">Загрузка…</div>
       ) : collections.length === 0 ? (

@@ -11,8 +11,22 @@ type Feedback = {
   fallback?: boolean;
 };
 
+type TargetWord = { word: string; translation: string };
+
+// Слово считается использованным, если в тексте есть оно или его форма (по корню).
+// Граница слова отсекает ложные совпадения внутри других слов (art ≠ start).
+function usedWord(text: string, word: string): boolean {
+  const w = word.toLowerCase().trim();
+  if (!w) return false;
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (new RegExp(`\\b${esc(w)}`, "i").test(text)) return true;
+  if (w.length >= 5 && new RegExp(`\\b${esc(w.slice(0, w.length - 2))}`, "i").test(text)) return true;
+  return false;
+}
+
 export default function WritingPage() {
   const [prompt, setPrompt] = useState("");
+  const [targetWords, setTargetWords] = useState<TargetWord[]>([]);
   const [promptLoading, setPromptLoading] = useState(true);
   const [text, setText] = useState("");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -28,8 +42,10 @@ export default function WritingPage() {
       const res = await fetch("/api/practice/writing/prompt", { method: "POST" });
       const data = await res.json();
       setPrompt(data.prompt || "Напиши 3-5 предложений на английском на любую тему.");
+      setTargetWords(Array.isArray(data.words) ? data.words : []);
     } catch {
       setPrompt("Напиши 3-5 предложений на английском на любую тему.");
+      setTargetWords([]);
     } finally {
       setPromptLoading(false);
     }
@@ -85,6 +101,42 @@ export default function WritingPage() {
         </div>
         <p className="text-base">{promptLoading ? "Загружаю задание…" : prompt}</p>
       </div>
+
+      {!feedback && targetWords.length > 0 && (
+        <div className="rounded-2xl border border-accent/40 bg-accent/5 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase text-accent">
+              Задействуй эти слова
+            </span>
+            <span className="text-xs font-bold text-muted">
+              {targetWords.filter((w) => usedWord(text, w.word)).length}/{targetWords.length}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {targetWords.map((w) => {
+              const used = usedWord(text, w.word);
+              return (
+                <span
+                  key={w.word}
+                  className={`rounded-lg border px-2.5 py-1 text-sm transition-colors ${
+                    used
+                      ? "border-success bg-success/10 font-bold text-success"
+                      : "border-border bg-background"
+                  }`}
+                >
+                  {used ? "✓ " : ""}
+                  {w.word}
+                  <span className="ml-1 text-xs font-normal text-muted">· {w.translation}</span>
+                </span>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            Используя слова, которые учишь, прямо в письме, ты закрепляешь их прочнее
+            всего (продуктивное использование).
+          </p>
+        </div>
+      )}
 
       {!feedback && (
         <div className="space-y-3">

@@ -6,6 +6,7 @@ import {
 } from "@/lib/analytics";
 import { getAchievements } from "@/lib/achievements";
 import { getProfile } from "@/lib/gamify";
+import { getVocabSize } from "@/lib/vocab-size";
 
 export const dynamic = "force-dynamic";
 
@@ -78,11 +79,12 @@ function Calendar({ data }: { data: DayPoint[] }) {
 }
 
 export default async function StatsPage() {
-  const [series, skills, achievements, profile] = await Promise.all([
+  const [series, skills, achievements, profile, vocab] = await Promise.all([
     getDailySeries(84),
     getPracticeSummary(),
     getAchievements(),
     getProfile(),
+    getVocabSize(),
   ]);
 
   const last30 = series.slice(-30);
@@ -105,6 +107,43 @@ export default async function StatsPage() {
           ← На главную
         </Link>
       </div>
+
+      <section className="rounded-3xl border border-border bg-surface p-5 shadow-[0_6px_20px_-12px_rgba(80,60,20,0.4)] sm:p-6">
+        <h2 className="font-display font-bold">📚 Словарный запас</h2>
+        <div className="mt-1 flex items-end gap-3">
+          <div className="font-display text-5xl font-bold text-primary">{vocab.total}</div>
+          <div className="pb-1.5 text-sm text-muted">разных слов в работе</div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-lg bg-success/10 px-2.5 py-1 text-xs font-bold text-success">
+            ✓ {vocab.learned} выучено
+          </span>
+          <span className="rounded-lg px-2.5 py-1 text-xs font-bold" style={{ backgroundColor: "color-mix(in srgb, var(--xp) 15%, transparent)", color: "var(--xp)" }}>
+            {vocab.learning} в изучении
+          </span>
+          <span className="rounded-lg bg-background px-2.5 py-1 text-xs font-bold text-muted">
+            {vocab.encountered} встречено в чтении
+          </span>
+        </div>
+
+        {vocab.nextMilestone && (
+          <div className="mt-4">
+            <div className="mb-1 flex items-center justify-between text-xs text-muted">
+              <span>До вехи {vocab.nextMilestone} слов</span>
+              <span>{vocab.pct}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-border">
+              <div className="h-full rounded-full" style={{ width: `${vocab.pct}%`, backgroundColor: "var(--primary)" }} />
+            </div>
+          </div>
+        )}
+
+        <p className="mt-3 text-xs text-muted">
+          Объём словаря — главный предиктор понимания речи и текста. Каждое новое слово
+          в чтении и карточках растит это число — лучший показатель реального прогресса.
+        </p>
+      </section>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {cards.map((c) => (

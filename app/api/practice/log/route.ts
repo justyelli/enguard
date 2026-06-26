@@ -4,9 +4,16 @@ import { awardXp, practiceXp } from "@/lib/gamify";
 
 const SKILLS = ["speaking", "listening", "grammar", "writing"];
 
-// POST /api/practice/log  { skill, detail?, score, total }
+// POST /api/practice/log  { skill, detail?, score, total, noAward? }
+// noAward=true — записать сессию без начисления XP (репетитор уже даёт XP за реплику).
 export async function POST(req: NextRequest) {
-  let body: { skill?: string; detail?: string; score?: number; total?: number };
+  let body: {
+    skill?: string;
+    detail?: string;
+    score?: number;
+    total?: number;
+    noAward?: boolean;
+  };
   try {
     body = await req.json();
   } catch {
@@ -25,6 +32,6 @@ export async function POST(req: NextRequest) {
       total,
     },
   });
-  const award = await awardXp(practiceXp(score, total));
+  const award = body.noAward ? null : await awardXp(practiceXp(score, total));
   return NextResponse.json({ ok: true, award });
 }

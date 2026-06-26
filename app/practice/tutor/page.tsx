@@ -42,16 +42,57 @@ export default function TutorPage() {
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const loggedRef = useRef(false);
+  const statsRef = useRef({ user: 0, clean: 0 });
+  const [flash, setFlash] = useState<string | null>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
-  // остановить озвучку при уходе со страницы
-  useEffect(() => stopSpeech, []);
+  // держим статистику диалога в ref: всего реплик ученика и без исправлений
+  useEffect(() => {
+    const userMsgs = messages.filter((m) => m.role === "user");
+    statsRef.current = {
+      user: userMsgs.length,
+      clean: userMsgs.filter((m) => !m.correction).length,
+    };
+  }, [messages]);
+
+  // Засчитать диалог как ОДНУ сессию говорения (один раз, при ≥2 репликах).
+  // Без начисления XP — репетитор уже даёт XP за каждую реплику; здесь только
+  // регистрируем практику, чтобы план/коуч/статистика видели говорение.
+  function logSession() {
+    const { user, clean } = statsRef.current;
+    if (loggedRef.current || user < 2) return;
+    loggedRef.current = true;
+    fetch("/api/practice/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        skill: "speaking",
+        detail: "tutor",
+        score: clean,
+        total: user,
+        noAward: true,
+      }),
+    })
+      .then(() => window.dispatchEvent(new CustomEvent("enguard:xp")))
+      .catch(() => {});
+  }
+
+  // при уходе со страницы засчитываем незавершённый разговор
+  useEffect(() => {
+    return () => {
+      logSession();
+      stopSpeech();
+    };
+  }, []);
 
   async function start(text: string) {
     stopSpeech();
+    loggedRef.current = false; // новая сессия
+    setFlash(null);
     setScenario(text);
     setMessages([]);
     setSending(true);
@@ -73,9 +114,20 @@ export default function TutorPage() {
   }
 
   function changeScenario() {
+    logSession(); // смена сценария = конец текущего разговора
     stopSpeech();
     setScenario(null);
     setMessages([]);
+  }
+
+  function finish() {
+    const counted = !loggedRef.current && statsRef.current.user >= 2;
+    changeScenario();
+    setFlash(
+      counted
+        ? "✓ Разговор засчитан как практика говорения"
+        : "Скажи хотя бы пару реплик, чтобы засчитать практику."
+    );
   }
 
   async function send() {
@@ -129,6 +181,11 @@ export default function TutorPage() {
         </Link>
         <h1 className="font-display text-xl font-bold sm:text-2xl">💬 AI-репетитор</h1>
         <p className="text-muted">Выбери сценарий и поговори вживую — я отвечаю и мягко исправляю ошибки.</p>
+        {flash && (
+          <div className="rounded-xl border border-success/40 bg-success/10 px-4 py-2 text-center text-sm font-bold text-success">
+            {flash}
+          </div>
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
           {SCENARIOS.map((s) => (
             <button
@@ -150,6 +207,12 @@ export default function TutorPage() {
       <div className="mb-2 flex items-center justify-between">
         <button onClick={changeScenario} className="text-sm text-muted hover:text-foreground">
           ← Сменить сценарий
+        </button>
+        <button
+          onClick={finish}
+          className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface"
+        >
+          Завершить ✓
         </button>
       </div>
 

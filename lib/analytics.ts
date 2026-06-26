@@ -223,6 +223,32 @@ export async function getMistakeCount(): Promise<number> {
   return prisma.card.count({ where: { lapses: { gt: 0 } } });
 }
 
+// «Умная практика» (как Practice у Duolingo): одна смешанная колода из самых
+// нужных к повторению карточек. Чередуем проблемные (lapses) и просроченные
+// (due) — интерливинг + адресность по слабым местам эффективнее блочной зубрёжки.
+export async function getSmartReviewCards(limit = 20): Promise<ReviewCard[]> {
+  const [due, mistakes] = await Promise.all([getDueCards(40), getMistakeCards(40)]);
+  const out: ReviewCard[] = [];
+  const seen = new Set<number>();
+  const push = (c: ReviewCard) => {
+    if (!seen.has(c.id)) {
+      seen.add(c.id);
+      out.push(c);
+    }
+  };
+  let i = 0;
+  let j = 0;
+  // чередуем: одно проблемное, одно просроченное
+  while (out.length < limit && (i < mistakes.length || j < due.length)) {
+    while (i < mistakes.length && seen.has(mistakes[i].id)) i++;
+    if (i < mistakes.length) push(mistakes[i++]);
+    if (out.length >= limit) break;
+    while (j < due.length && seen.has(due[j].id)) j++;
+    if (j < due.length) push(due[j++]);
+  }
+  return out.slice(0, limit);
+}
+
 // «Личи» — хронически проваливаемые карточки (нужна адресная проработка).
 export async function getLeechCount(): Promise<number> {
   return prisma.card.count({ where: { lapses: { gte: LEECH_LAPSES } } });

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDueCards, getMistakeCards } from "@/lib/analytics";
+import { getDueCards, getMistakeCards, getSmartReviewCards } from "@/lib/analytics";
 import StudySession from "@/components/StudySession";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 const TITLES: Record<string, string> = {
   due: "Повторить сегодня",
   mistakes: "Мои ошибки",
+  smart: "⚡ Умная практика",
 };
 
 export default async function ReviewPage({
@@ -16,20 +17,27 @@ export default async function ReviewPage({
   params: Promise<{ mode: string }>;
 }) {
   const { mode } = await params;
-  if (mode !== "due" && mode !== "mistakes") notFound();
+  if (mode !== "due" && mode !== "mistakes" && mode !== "smart") notFound();
 
-  const cards = mode === "due" ? await getDueCards(40) : await getMistakeCards(40);
+  const cards =
+    mode === "due"
+      ? await getDueCards(40)
+      : mode === "mistakes"
+        ? await getMistakeCards(40)
+        : await getSmartReviewCards(20);
   const title = TITLES[mode];
 
   if (cards.length === 0) {
     return (
       <div className="mx-auto max-w-md space-y-4 py-10 text-center">
-        <div className="text-5xl">{mode === "due" ? "✅" : "🎯"}</div>
+        <div className="text-5xl">{mode === "due" ? "✅" : mode === "smart" ? "⚡" : "🎯"}</div>
         <h1 className="font-display text-xl font-bold">{title}</h1>
         <p className="text-muted">
           {mode === "due"
             ? "Сейчас нечего повторять — возвращайся позже."
-            : "Ошибок пока нет. Так держать!"}
+            : mode === "smart"
+              ? "Нечего повторять — добавь слов в карточки и возвращайся."
+              : "Ошибок пока нет. Так держать!"}
         </p>
         <Link
           href="/"

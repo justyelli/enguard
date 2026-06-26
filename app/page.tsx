@@ -138,6 +138,22 @@ export default async function HomePage() {
 
       {insight && <WeeklyInsight insight={insight} />}
 
+      {(counts.due > 0 || counts.mistakes > 0) && (
+        <Link
+          href="/review/smart"
+          className="flex items-center justify-between gap-3 rounded-3xl border-2 border-primary/50 bg-primary/5 p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div>
+            <div className="font-display text-lg font-bold">⚡ Умная практика</div>
+            <div className="text-sm text-muted">
+              Одна сессия из самых нужных слов — просроченные и проблемные вперемешку.
+              Лучший способ закрепить за один заход.
+            </div>
+          </div>
+          <span className="btn3d shrink-0 bg-primary px-5 py-2.5 text-white">Начать</span>
+        </Link>
+      )}
+
       {(counts.due > 0 || counts.mistakes > 0 || counts.errors > 0 || counts.leeches > 0) && (
         <section className="grid gap-3 sm:grid-cols-2">
           {counts.due > 0 && (

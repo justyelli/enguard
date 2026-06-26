@@ -89,8 +89,9 @@ function validate(p: unknown): ListeningStory | null {
   return { title: o.title.trim(), text: o.text.trim(), questions, usedAI: true };
 }
 
-export async function generateStory(level: Level): Promise<ListeningStory> {
+export async function generateStory(level: Level, topic?: string): Promise<ListeningStory> {
   if (!hasOpenAI()) return FALLBACK[level];
+  const cleanTopic = typeof topic === "string" ? topic.trim().slice(0, 80) : "";
   try {
     const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
@@ -100,7 +101,12 @@ export async function generateStory(level: Level): Promise<ListeningStory> {
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: SYS },
-        { role: "user", content: `Уровень: ${level}.` },
+        {
+          role: "user",
+          content: cleanTopic
+            ? `Уровень: ${level}. Тема: ${cleanTopic}.`
+            : `Уровень: ${level}.`,
+        },
       ],
     });
     const raw = completion.choices[0]?.message?.content ?? "{}";
